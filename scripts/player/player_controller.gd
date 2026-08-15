@@ -72,6 +72,12 @@ var _current_height : float = HEIGHT_STAND
 # Mouse input accumulated per frame (avoids jitter from Input.get_last_mouse_velocity)
 var _mouse_delta    : Vector2  = Vector2.ZERO
 
+# Mouse look & recoil
+var _mouse_pitch     : float = 0.0   # Baseline pitch from mouse look (degrees)
+var _recoil_pitch    : float = 0.0   # Current upward recoil offset (degrees)
+var _recoil_yaw      : float = 0.0   # Current horizontal recoil offset (degrees)
+var _recoil_recovery : float = 4.5   # Rate at which recoil recovers (degrees/second)
+
 # Prevent holding jump to auto-jump — require a fresh press
 var _jump_consumed  : bool = false
 
@@ -89,9 +95,23 @@ func _ready() -> void:
 	# Initialise camera mount to standing eye height above origin.
 	# Origin is capsule centre = floor + HEIGHT_STAND/2, so eye above origin:
 	_camera_mount.position.y = EYE_HEIGHT_STAND - (HEIGHT_STAND * 0.5)
-	# Give the weapon a reference to the camera so recoil can be applied.
-	if _weapon and _weapon.has_method("set_camera"):
-		_weapon.set_camera(_camera)
+	_mouse_pitch = _camera_mount.rotation_degrees.x
+	# Give the weapon references so recoil and camera are linked.
+	if _weapon:
+		if _weapon.has_method("set_player"):
+			_weapon.set_player(self)
+		if _weapon.has_method("set_camera"):
+			_weapon.set_camera(_camera)
+
+
+## Adds recoil impulse to camera pitch and yaw.
+## v_kick: degrees upward kick (positive)
+## h_kick: degrees horizontal kick
+## recovery_rate: degrees/sec recovery toward baseline
+func apply_recoil(v_kick: float, h_kick: float, recovery_rate: float) -> void:
+	_recoil_pitch += v_kick
+	_recoil_yaw += h_kick
+	_recoil_recovery = recovery_rate
 
 
 # =============================================================================
@@ -128,27 +148,48 @@ func _process(_delta: float) -> void:
 # PHYSICS PROCESS
 # =============================================================================
 func _physics_process(delta: float) -> void:
-	_handle_mouse_look()
+	_handle_mouse_look(delta)
 	_handle_movement(delta)
 	_handle_capsule_lerp(delta)
 	move_and_slide()
 
 
 # =============================================================================
-# MOUSE LOOK
+# MOUSE LOOK & RECOIL
 # =============================================================================
-func _handle_mouse_look() -> void:
-	if _mouse_delta == Vector2.ZERO:
-		return
+func _handle_mouse_look(delta: float) -> void:
+	# 1. Horizontal mouse look (yaw) — rotate the whole body so movement stays aligned
+	if _mouse_delta.x != 0.0:
+		rotate_y(-_mouse_delta.x * MOUSE_SENSITIVITY)
 
-	# Horizontal rotation — rotate the whole body so movement stays aligned
-	rotate_y(-_mouse_delta.x * MOUSE_SENSITIVITY)
+	# 2. Vertical mouse look (pitch) — modify _mouse_pitch, absorbing active recoil if pulling down
+	if _mouse_delta.y != 0.0:
+		var pitch_delta : float = rad_to_deg(_mouse_delta.y * MOUSE_SENSITIVITY)
+		# When pulling mouse DOWN (pitch_delta > 0), absorb active upward recoil first
+		if pitch_delta > 0.0 and _recoil_pitch > 0.0:
+			var absorbed : float = min(pitch_delta, _recoil_pitch)
+			_recoil_pitch -= absorbed
+			pitch_delta -= absorbed
+		elif pitch_delta < 0.0 and _recoil_pitch < 0.0:
+			var absorbed : float = max(pitch_delta, _recoil_pitch)
+			_recoil_pitch -= absorbed
+			pitch_delta -= absorbed
 
-	# Vertical rotation — rotate only the camera mount, clamped
-	var new_pitch := _camera_mount.rotation_degrees.x - rad_to_deg(_mouse_delta.y * MOUSE_SENSITIVITY)
-	_camera_mount.rotation_degrees.x = clamp(new_pitch, CAMERA_PITCH_MIN, CAMERA_PITCH_MAX)
+		_mouse_pitch = clamp(_mouse_pitch - pitch_delta, CAMERA_PITCH_MIN, CAMERA_PITCH_MAX)
 
-	_mouse_delta = Vector2.ZERO  # consume the delta
+	_mouse_delta = Vector2.ZERO
+
+	# 3. Smooth recoil recovery over time toward rest (0)
+	if _recoil_pitch != 0.0:
+		_recoil_pitch = move_toward(_recoil_pitch, 0.0, _recoil_recovery * delta)
+	if _recoil_yaw != 0.0:
+		_recoil_yaw = move_toward(_recoil_yaw, 0.0, _recoil_recovery * delta)
+
+	# 4. Final camera pitch = base mouse pitch + recoil pitch (clamped safely)
+	_camera_mount.rotation_degrees.x = clamp(_mouse_pitch + _recoil_pitch, CAMERA_PITCH_MIN, CAMERA_PITCH_MAX)
+
+	# 5. Final camera yaw offset from recoil
+	_camera.rotation_degrees.y = _recoil_yaw
 
 
 # =============================================================================

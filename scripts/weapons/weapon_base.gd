@@ -31,9 +31,9 @@ extends Node3D
 # Debug: temporary Label3D showing ammo (hidden in production).
 @onready var _ammo_label    : Label3D      = $AmmoLabel
 
-# Reference to the Camera3D so recoil can be applied.
-# Set by the player controller after instantiation via set_camera().
-var _camera : Camera3D = null
+# Reference to the Player and Camera3D so recoil can be applied cleanly.
+var _player : CharacterBody3D = null
+var _camera : Camera3D        = null
 
 
 # -----------------------------------------------------------------------------
@@ -46,9 +46,6 @@ var _current_ammo    : int         = 0
 var _reserve_ammo    : int         = 0
 var _fire_timer      : float       = 0.0   # countdown to next allowed shot
 var _reload_timer    : float       = 0.0   # countdown to reload completion
-
-# Recoil accumulator — added each shot, recovered over time.
-var _recoil_pitch    : float       = 0.0   # current pending recoil (degrees)
 
 # Muzzle flash visibility timer.
 var _muzzle_timer    : float       = 0.0
@@ -71,6 +68,11 @@ func _ready() -> void:
 	_update_ammo_label()
 
 
+## Called by the player controller to link the player body.
+func set_player(player: CharacterBody3D) -> void:
+	_player = player
+
+
 ## Called by the player controller to give the weapon a camera reference.
 func set_camera(cam: Camera3D) -> void:
 	_camera = cam
@@ -86,7 +88,6 @@ func _process(delta: float) -> void:
 	_tick_fire_timer(delta)
 	_tick_reload_timer(delta)
 	_tick_muzzle_flash(delta)
-	_recover_recoil(delta)
 
 
 # =============================================================================
@@ -234,34 +235,9 @@ func _finish_reload() -> void:
 # RECOIL
 # =============================================================================
 func _apply_recoil() -> void:
-	if _camera == null:
-		return
-	# Vertical kick — upward (negative pitch in Godot).
-	_recoil_pitch += data.recoil_vertical
-	# Horizontal — applied immediately as a random offset.
-	var h_kick : float = randf_range(-data.recoil_horizontal, data.recoil_horizontal)
-	# Apply to CameraMount parent (the Node3D that owns Camera3D).
-	var mount := _camera.get_parent() as Node3D
-	if mount:
-		mount.rotation_degrees.x -= data.recoil_vertical
-		mount.rotation_degrees.x = clamp(mount.rotation_degrees.x, -88.0, 88.0)
-		# Horizontal recoil applied to the CharacterBody3D (grandparent of CameraMount).
-		var body := mount.get_parent() as Node3D
-		if body:
-			body.rotate_y(deg_to_rad(h_kick))
-
-
-func _recover_recoil(delta: float) -> void:
-	if _recoil_pitch <= 0.0 or _camera == null:
-		_recoil_pitch = 0.0
-		return
-	var recovery : float = data.recoil_recovery * delta
-	var applied  : float = min(recovery, _recoil_pitch)
-	_recoil_pitch -= applied
-	var mount := _camera.get_parent() as Node3D
-	if mount:
-		mount.rotation_degrees.x += applied
-		mount.rotation_degrees.x = clamp(mount.rotation_degrees.x, -88.0, 88.0)
+	if _player and _player.has_method("apply_recoil"):
+		var h_kick : float = randf_range(-data.recoil_horizontal, data.recoil_horizontal)
+		_player.apply_recoil(data.recoil_vertical, h_kick, data.recoil_recovery)
 
 
 # =============================================================================

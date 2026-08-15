@@ -1,4 +1,4 @@
-﻿# Project FPS — Development Status
+# Project FPS — Development Status
 
 **Last Updated:** 2026-08-15
 **Current Milestone:** Milestone 2 — First Weapon (implementation complete, awaiting playtest)
@@ -97,16 +97,16 @@ States: READY, FIRING, RELOADING
 | reload_time | 2.0 sec |
 | spread_degrees | 0.5 |
 | range_meters | 100.0 |
-| recoil_vertical | 0.4 deg/shot |
-| recoil_horizontal | 0.15 deg max random |
-| recoil_recovery | 8.0 deg/sec |
+| recoil_vertical | 0.85 deg/shot |
+| recoil_horizontal | 0.20 deg max random |
+| recoil_recovery | 4.5 deg/sec |
 
 ### How Firing Works
 
 1. PlayerController._process detects Input.is_action_pressed("fire_primary")
 2. Calls weapon.try_fire() each frame (fire_timer prevents rapid-fire)
-3. weapon_base deducts ammo, runs _do_hitscan(), applies recoil, triggers muzzle flash
-4. RayCast3D (child of weapon root, points forward -Z) reports collision
+3. weapon_base deducts ammo, runs _do_hitscan(), applies recoil impulse via player.apply_recoil(), triggers muzzle flash
+4. RayCast3D (child of weapon root under Camera3D, points forward -Z) reports collision
 5. Hit info printed to debugger, orange sphere spawned at impact point for 2 seconds
 
 ### How Reload Works
@@ -118,9 +118,13 @@ States: READY, FIRING, RELOADING
 
 ### Recoil Implementation
 
-- Each shot: camera mount pitched up by recoil_vertical degrees
-- Each shot: body rotated horizontally by random [-recoil_horizontal, +recoil_horizontal] degrees
-- Per frame: accumulated recoil pitch recovered at recoil_recovery degrees/sec
+- PlayerController owns both mouse look and recoil integration in _physics_process
+- Shot adds +recoil_vertical to _recoil_pitch and random ±recoil_horizontal to _recoil_yaw
+- Downward mouse input absorbs _recoil_pitch first, allowing intuitive spray compensation without dive on release
+- When not firing, accumulated recoil decays back to rest at recoil_recovery deg/sec
+- CameraMount pitch = clamp(_mouse_pitch + _recoil_pitch)
+- Camera3D yaw = _recoil_yaw
+- Hitscan RayCast3D inherits final camera transform frame-accurately
 
 ### Test Targets Added
 
