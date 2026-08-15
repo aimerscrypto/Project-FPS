@@ -1,4 +1,5 @@
 extends Node
+class_name Health
 
 # =============================================================================
 # Project FPS — Health Component
@@ -10,8 +11,6 @@ extends Node
 # =============================================================================
 
 const DamageInfo = preload("res://scripts/systems/damage_info.gd")
-
-class_name Health
 
 signal damage_received(damage_info: DamageInfo, current_hp: float, max_hp: float)
 signal healed(amount: float, current_hp: float, max_hp: float)

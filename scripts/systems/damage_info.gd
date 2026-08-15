@@ -1,4 +1,5 @@
 extends RefCounted
+class_name DamageInfo
 
 # =============================================================================
 # Project FPS — DamageInfo
@@ -6,8 +7,6 @@ extends RefCounted
 #
 # Encapsulates damage data passed between attackers, weapons, and targets.
 # =============================================================================
-
-class_name DamageInfo
 
 enum HitType {
 	BODY,

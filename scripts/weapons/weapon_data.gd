@@ -1,4 +1,5 @@
 extends Resource
+class_name WeaponData
 
 # =============================================================================
 # Project FPS — WeaponData
@@ -8,8 +9,6 @@ extends Resource
 # All tunable stats live here — not in the weapon script.
 # Create one .tres file per weapon type.
 # =============================================================================
-
-class_name WeaponData
 
 # --- Identity ---
 @export var weapon_name    : String = "Unnamed Weapon"
