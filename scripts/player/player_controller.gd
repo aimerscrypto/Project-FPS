@@ -1,0 +1,334 @@
+extends CharacterBody3D
+
+# =============================================================================
+# Project FPS — PlayerController
+# Milestone 1 — Movement
+#
+# Handles: mouse look, walk, sprint, jump, air control, crouch, slide.
+# Does NOT handle: weapons, health, damage, UI, networking.
+#
+# All tuning constants are grouped here for easy iteration during playtesting.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# MOVEMENT CONSTANTS  (tune these during playtesting)
+# -----------------------------------------------------------------------------
+const WALK_SPEED        : float = 7.0    # m/s — normal movement
+const SPRINT_SPEED      : float = 10.0   # m/s — sprinting
+const CROUCH_SPEED      : float = 3.5    # m/s — crouching
+const SLIDE_SPEED_START : float = 13.0   # m/s — initial slide velocity
+const SLIDE_SPEED_MIN   : float = 3.0    # m/s — slide ends below this speed
+const SLIDE_FRICTION    : float = 4.0    # deceleration applied during slide (m/s²)
+
+# Acceleration / Deceleration
+const ACCEL_GROUND      : float = 30.0   # how quickly we reach target speed on ground
+const DECEL_GROUND      : float = 25.0   # how quickly we stop on ground
+const ACCEL_AIR         : float = 8.0    # air acceleration (lower = less responsive)
+const DECEL_AIR         : float = 4.0    # air friction (lower = floatier)
+
+# Jump / Gravity
+const JUMP_VELOCITY     : float = 7.5    # upward velocity applied on jump
+const GRAVITY           : float = 20.0   # m/s² downward pull
+
+# Mouse look
+const MOUSE_SENSITIVITY : float = 0.002  # radians per pixel — tune to taste
+const CAMERA_PITCH_MIN  : float = -88.0  # degrees — max look down
+const CAMERA_PITCH_MAX  : float = 88.0   # degrees — max look up
+
+# Capsule heights (in metres)
+const HEIGHT_STAND      : float = 1.8
+const HEIGHT_CROUCH     : float = 1.0
+const HEIGHT_LERP_SPEED : float = 12.0   # how fast the capsule shrinks/grows
+
+# Camera vertical offset from capsule centre (eye height relative to capsule top)
+const CAM_OFFSET_STAND  : float = 0.75   # 0 = centre, positive = above centre
+const CAM_OFFSET_CROUCH : float = 0.1
+
+
+# -----------------------------------------------------------------------------
+# NODE REFERENCES — set via @onready to avoid fragile string paths
+# -----------------------------------------------------------------------------
+@onready var _camera_mount : Node3D          = $CameraMount
+@onready var _camera       : Camera3D        = $CameraMount/Camera3D
+@onready var _collision    : CollisionShape3D = $CollisionShape3D
+
+
+# -----------------------------------------------------------------------------
+# STATE
+# -----------------------------------------------------------------------------
+enum MoveState { WALK, SPRINT, CROUCH, SLIDE, AIR }
+
+var _state          : MoveState = MoveState.WALK
+var _is_sliding     : bool      = false
+var _slide_velocity : Vector3   = Vector3.ZERO
+
+# Capsule dimensions tracked for smooth lerp
+var _current_height : float = HEIGHT_STAND
+
+# Mouse input accumulated per frame (avoids jitter from Input.get_last_mouse_velocity)
+var _mouse_delta    : Vector2  = Vector2.ZERO
+
+# Prevent holding jump to auto-jump — require a fresh press
+var _jump_consumed  : bool = false
+
+
+# =============================================================================
+# READY
+# =============================================================================
+func _ready() -> void:
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_set_capsule_height(HEIGHT_STAND)
+
+
+# =============================================================================
+# INPUT — collect mouse delta here; handle per-frame in _physics_process
+# =============================================================================
+func _input(event: InputEvent) -> void:
+	# Mouse look accumulation
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		_mouse_delta += event.relative
+
+	# Toggle mouse capture with Escape
+	if event.is_action_pressed("ui_cancel"):
+		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		else:
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+# =============================================================================
+# PHYSICS PROCESS
+# =============================================================================
+func _physics_process(delta: float) -> void:
+	_handle_mouse_look()
+	_handle_movement(delta)
+	_handle_capsule_lerp(delta)
+	move_and_slide()
+
+
+# =============================================================================
+# MOUSE LOOK
+# =============================================================================
+func _handle_mouse_look() -> void:
+	if _mouse_delta == Vector2.ZERO:
+		return
+
+	# Horizontal rotation — rotate the whole body so movement stays aligned
+	rotate_y(-_mouse_delta.x * MOUSE_SENSITIVITY)
+
+	# Vertical rotation — rotate only the camera mount, clamped
+	var new_pitch := _camera_mount.rotation_degrees.x - rad_to_deg(_mouse_delta.y * MOUSE_SENSITIVITY)
+	_camera_mount.rotation_degrees.x = clamp(new_pitch, CAMERA_PITCH_MIN, CAMERA_PITCH_MAX)
+
+	_mouse_delta = Vector2.ZERO  # consume the delta
+
+
+# =============================================================================
+# MOVEMENT DISPATCH
+# =============================================================================
+func _handle_movement(delta: float) -> void:
+	# Always apply gravity when airborne
+	if not is_on_floor():
+		velocity.y -= GRAVITY * delta
+	else:
+		# Landing — end any air state
+		if _state == MoveState.AIR:
+			_state = MoveState.WALK
+		_jump_consumed = false
+
+	# --- State transitions ---
+	_resolve_state()
+
+	# --- Dispatch to state handler ---
+	match _state:
+		MoveState.WALK:
+			_move_grounded(delta, WALK_SPEED)
+		MoveState.SPRINT:
+			_move_grounded(delta, SPRINT_SPEED)
+		MoveState.CROUCH:
+			_move_grounded(delta, CROUCH_SPEED)
+		MoveState.SLIDE:
+			_move_slide(delta)
+		MoveState.AIR:
+			_move_air(delta)
+
+	# --- Jump ---
+	_handle_jump()
+
+
+# =============================================================================
+# STATE RESOLVER
+# =============================================================================
+func _resolve_state() -> void:
+	var on_floor  := is_on_floor()
+	var sprinting := Input.is_action_pressed("sprint")
+	var crouching := Input.is_action_pressed("crouch")
+	var moving    := _get_wish_dir().length_squared() > 0.01
+
+	if not on_floor:
+		_state = MoveState.AIR
+		return
+
+	# Slide: must be sprinting + moving + press crouch
+	if _state != MoveState.SLIDE:
+		if sprinting and crouching and moving:
+			_start_slide()
+			return
+
+	# Already sliding — check end conditions
+	if _state == MoveState.SLIDE:
+		return   # _move_slide handles its own end condition
+
+	# Crouch (not sliding)
+	if crouching:
+		_state = MoveState.CROUCH
+		return
+
+	# Sprint
+	if sprinting and moving:
+		_state = MoveState.SPRINT
+		return
+
+	# Default walk
+	_state = MoveState.WALK
+
+
+# =============================================================================
+# GROUNDED MOVEMENT  (walk / sprint / crouch)
+# =============================================================================
+func _move_grounded(delta: float, target_speed: float) -> void:
+	var wish_dir := _get_wish_dir()
+
+	if wish_dir.length_squared() > 0.01:
+		# Accelerate toward wish direction
+		var target_vel := wish_dir * target_speed
+		velocity.x = move_toward(velocity.x, target_vel.x, ACCEL_GROUND * delta)
+		velocity.z = move_toward(velocity.z, target_vel.z, ACCEL_GROUND * delta)
+	else:
+		# Decelerate to stop
+		velocity.x = move_toward(velocity.x, 0.0, DECEL_GROUND * delta)
+		velocity.z = move_toward(velocity.z, 0.0, DECEL_GROUND * delta)
+
+
+# =============================================================================
+# AIR MOVEMENT
+# =============================================================================
+func _move_air(delta: float) -> void:
+	var wish_dir := _get_wish_dir()
+
+	if wish_dir.length_squared() > 0.01:
+		velocity.x = move_toward(velocity.x, wish_dir.x * SPRINT_SPEED, ACCEL_AIR * delta)
+		velocity.z = move_toward(velocity.z, wish_dir.z * SPRINT_SPEED, ACCEL_AIR * delta)
+	else:
+		# Light air friction — player retains momentum but drifts slowly toward stop
+		velocity.x = move_toward(velocity.x, 0.0, DECEL_AIR * delta)
+		velocity.z = move_toward(velocity.z, 0.0, DECEL_AIR * delta)
+
+
+# =============================================================================
+# SLIDE MOVEMENT
+# =============================================================================
+func _start_slide() -> void:
+	_state = MoveState.SLIDE
+	_is_sliding = true
+	# Launch with a boost in the current facing direction
+	var dir := _get_wish_dir()
+	if dir.length_squared() < 0.01:
+		dir = -transform.basis.z  # fall back to facing direction
+	_slide_velocity = dir * SLIDE_SPEED_START
+
+
+func _move_slide(delta: float) -> void:
+	# Apply friction to the slide velocity
+	var speed := _slide_velocity.length()
+	speed = max(speed - SLIDE_FRICTION * delta, 0.0)
+	_slide_velocity = _slide_velocity.normalized() * speed if speed > 0.0 else Vector3.ZERO
+
+	velocity.x = _slide_velocity.x
+	velocity.z = _slide_velocity.z
+
+	# End slide conditions
+	var crouch_held := Input.is_action_pressed("crouch")
+	if speed < SLIDE_SPEED_MIN or not crouch_held:
+		_end_slide()
+
+
+func _end_slide() -> void:
+	_is_sliding = false
+	_slide_velocity = Vector3.ZERO
+	# Transition to crouch if still holding crouch, otherwise walk
+	if Input.is_action_pressed("crouch"):
+		_state = MoveState.CROUCH
+	else:
+		_state = MoveState.WALK
+
+
+# =============================================================================
+# JUMP
+# =============================================================================
+func _handle_jump() -> void:
+	if is_on_floor() and not _jump_consumed and Input.is_action_just_pressed("jump"):
+		velocity.y = JUMP_VELOCITY
+		_state = MoveState.AIR
+		_jump_consumed = true
+		# End slide on jump
+		if _is_sliding:
+			_end_slide()
+
+
+# =============================================================================
+# CAPSULE HEIGHT MANAGEMENT
+# =============================================================================
+func _handle_capsule_lerp(delta: float) -> void:
+	var target_height := HEIGHT_STAND
+
+	if _state == MoveState.CROUCH or _state == MoveState.SLIDE:
+		target_height = HEIGHT_CROUCH
+
+	if not is_equal_approx(_current_height, target_height):
+		# Check for ceiling before standing up
+		if target_height > _current_height and _is_ceiling_blocking():
+			return  # stay crouched
+
+		_current_height = lerp(_current_height, target_height, HEIGHT_LERP_SPEED * delta)
+		_set_capsule_height(_current_height)
+
+
+func _set_capsule_height(h: float) -> void:
+	var shape := _collision.shape as CapsuleShape3D
+	if shape == null:
+		return
+	shape.height = h
+	# Keep capsule bottom fixed on the ground by raising the collision node
+	_collision.position.y = h * 0.5
+
+	# Move camera mount — eye position is offset from capsule top
+	var cam_offset := CAM_OFFSET_STAND if h >= HEIGHT_STAND - 0.05 else CAM_OFFSET_CROUCH
+	_camera_mount.position.y = (h * 0.5) + cam_offset
+
+
+func _is_ceiling_blocking() -> bool:
+	# Cast a short ray upward to check for a ceiling before standing
+	var space  := get_world_3d().direct_space_state
+	var origin := global_position
+	var target := origin + Vector3.UP * (HEIGHT_STAND + 0.05)
+	var query  := PhysicsRayQueryParameters3D.create(origin, target, collision_mask)
+	query.exclude = [self]
+	var result := space.intersect_ray(query)
+	return not result.is_empty()
+
+
+# =============================================================================
+# HELPERS
+# =============================================================================
+
+## Returns the normalised world-space movement direction based on WASD + camera facing.
+func _get_wish_dir() -> Vector3:
+	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
+	if input == Vector2.ZERO:
+		return Vector3.ZERO
+	# Transform input from camera-relative to world-relative (horizontal only)
+	var dir := (transform.basis * Vector3(input.x, 0.0, input.y)).normalized()
+	dir.y = 0.0
+	return dir
