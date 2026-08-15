@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://assault_rifle"]
+
+[ext_resource type="PackedScene" path="res://scenes/weapons/weapon_base.tscn" id="1_base"]
+[ext_resource type="Resource" path="res://data/weapons/assault_rifle.tres" id="2_data"]
+
+[node name="AssaultRifle" instance=ExtResource("1_base")]
+data = ExtResource("2_data")

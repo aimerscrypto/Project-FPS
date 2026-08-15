@@ -2,10 +2,11 @@ extends CharacterBody3D
 
 # =============================================================================
 # Project FPS — PlayerController
-# Milestone 1 — Movement
+# Milestone 1 — Movement | Milestone 2 — Weapon input
 #
 # Handles: mouse look, walk, sprint, jump, air control, crouch, slide.
-# Does NOT handle: weapons, health, damage, UI, networking.
+# Milestone 2 adds: weapon fire / reload input delegation only.
+# All weapon logic lives in weapon_base.gd — not here.
 #
 # All tuning constants are grouped here for easy iteration during playtesting.
 # =============================================================================
@@ -51,6 +52,10 @@ const HEIGHT_LERP_SPEED : float = 12.0   # how fast the capsule shrinks/grows
 @onready var _camera       : Camera3D        = $CameraMount/Camera3D
 @onready var _collision    : CollisionShape3D = $CollisionShape3D
 
+# Weapon reference — resolved at runtime so PlayerController is not tightly
+# coupled to a specific weapon type.
+@onready var _weapon : Node3D = $CameraMount/Camera3D/AssaultRifle
+
 
 # -----------------------------------------------------------------------------
 # STATE
@@ -84,6 +89,9 @@ func _ready() -> void:
 	# Initialise camera mount to standing eye height above origin.
 	# Origin is capsule centre = floor + HEIGHT_STAND/2, so eye above origin:
 	_camera_mount.position.y = EYE_HEIGHT_STAND - (HEIGHT_STAND * 0.5)
+	# Give the weapon a reference to the camera so recoil can be applied.
+	if _weapon and _weapon.has_method("set_camera"):
+		_weapon.set_camera(_camera)
 
 
 # =============================================================================
@@ -100,6 +108,20 @@ func _input(event: InputEvent) -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		else:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+# =============================================================================
+# PROCESS — weapon input only (does not affect physics / movement)
+# =============================================================================
+func _process(_delta: float) -> void:
+	if _weapon == null:
+		return
+	# Automatic fire: hold to fire.
+	if Input.is_action_pressed("fire_primary"):
+		_weapon.try_fire()
+	# Reload.
+	if Input.is_action_just_pressed("reload"):
+		_weapon.try_reload()
 
 
 # =============================================================================

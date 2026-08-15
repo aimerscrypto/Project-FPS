@@ -1,0 +1,306 @@
+extends Node3D
+
+# =============================================================================
+# Project FPS — WeaponBase
+# Milestone 2 — First Weapon
+#
+# Handles: firing, reload, ammo, hitscan raycast, recoil application.
+# Does NOT handle: health, enemies, UI, multiplayer, animations.
+#
+# Designed to be data-driven via a WeaponData resource.
+# All weapon-specific numbers come from the attached WeaponData .tres file.
+# Attach any WeaponData resource via the Inspector to change weapon behaviour.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# EXPORTS
+# -----------------------------------------------------------------------------
+@export var data : WeaponData   ## Attach the weapon's .tres data resource here.
+
+
+# -----------------------------------------------------------------------------
+# NODE REFERENCES
+# -----------------------------------------------------------------------------
+# RayCast3D for hitscan — must exist as a child node named "RayCast3D".
+@onready var _raycast       : RayCast3D    = $RayCast3D
+
+# Muzzle flash Node3D — toggled visible for one frame on fire.
+@onready var _muzzle_flash  : Node3D       = $MuzzleFlash
+
+# Debug: temporary Label3D showing ammo (hidden in production).
+@onready var _ammo_label    : Label3D      = $AmmoLabel
+
+# Reference to the Camera3D so recoil can be applied.
+# Set by the player controller after instantiation via set_camera().
+var _camera : Camera3D = null
+
+
+# -----------------------------------------------------------------------------
+# WEAPON STATE
+# -----------------------------------------------------------------------------
+enum WeaponState { READY, FIRING, RELOADING }
+
+var _state           : WeaponState = WeaponState.READY
+var _current_ammo    : int         = 0
+var _reserve_ammo    : int         = 0
+var _fire_timer      : float       = 0.0   # countdown to next allowed shot
+var _reload_timer    : float       = 0.0   # countdown to reload completion
+
+# Recoil accumulator — added each shot, recovered over time.
+var _recoil_pitch    : float       = 0.0   # current pending recoil (degrees)
+
+# Muzzle flash visibility timer.
+var _muzzle_timer    : float       = 0.0
+const MUZZLE_FLASH_DURATION : float = 0.05  # seconds
+
+
+# =============================================================================
+# SETUP
+# =============================================================================
+func _ready() -> void:
+	if data == null:
+		push_error("WeaponBase: no WeaponData assigned — weapon will not function.")
+		return
+	_current_ammo = data.magazine_size
+	_reserve_ammo = data.reserve_ammo
+	# RayCast3D length set from weapon data range.
+	_raycast.target_position = Vector3(0.0, 0.0, -data.range_meters)
+	_muzzle_flash.visible = false
+	_update_ammo_label()
+
+
+## Called by the player controller to give the weapon a camera reference.
+func set_camera(cam: Camera3D) -> void:
+	_camera = cam
+
+
+# =============================================================================
+# PROCESS
+# =============================================================================
+func _process(delta: float) -> void:
+	if data == null:
+		return
+
+	_tick_fire_timer(delta)
+	_tick_reload_timer(delta)
+	_tick_muzzle_flash(delta)
+	_recover_recoil(delta)
+
+
+# =============================================================================
+# PUBLIC API — called by the player controller
+# =============================================================================
+
+## Attempt to fire. Called every frame while fire input is held (automatic).
+## For semi-auto, call only on just_pressed.
+func try_fire() -> void:
+	if data == null:
+		return
+	if _state == WeaponState.RELOADING:
+		return
+	if _fire_timer > 0.0:
+		return
+
+	if _current_ammo <= 0:
+		_dry_fire()
+		return
+
+	_fire()
+
+
+## Attempt to reload. Called when reload input is pressed.
+func try_reload() -> void:
+	if data == null:
+		return
+	if _state == WeaponState.RELOADING:
+		return
+	if _current_ammo == data.magazine_size:
+		return  # already full
+	if _reserve_ammo <= 0:
+		return  # nothing to reload from
+
+	_start_reload()
+
+
+# =============================================================================
+# FIRE
+# =============================================================================
+func _fire() -> void:
+	_state = WeaponState.FIRING
+	_current_ammo -= 1
+	_fire_timer = 1.0 / data.fire_rate
+
+	# Hitscan
+	_do_hitscan()
+
+	# Recoil
+	_apply_recoil()
+
+	# Muzzle flash
+	_muzzle_flash.visible = true
+	_muzzle_timer = MUZZLE_FLASH_DURATION
+
+	_update_ammo_label()
+	print("[Weapon] Fired. Ammo: %d / %d" % [_current_ammo, _reserve_ammo])
+
+
+func _dry_fire() -> void:
+	# Limit dry-fire spam messaging.
+	print("[Weapon] DRY FIRE — magazine empty. Press R to reload.")
+	_fire_timer = 0.3  # short delay before re-triggering dry fire message
+
+
+# =============================================================================
+# HITSCAN
+# =============================================================================
+func _do_hitscan() -> void:
+	# Apply spread before casting.
+	var spread_rad : float = deg_to_rad(data.spread_degrees)
+	var offset_x   : float = randf_range(-spread_rad, spread_rad)
+	var offset_y   : float = randf_range(-spread_rad, spread_rad)
+	# Target position in local space (forward = -Z for Camera3D).
+	var base_target := Vector3(offset_x, offset_y, -data.range_meters)
+	_raycast.target_position = base_target
+
+	# Force update so result is available immediately this frame.
+	_raycast.force_raycast_update()
+
+	if _raycast.is_colliding():
+		var hit_point    := _raycast.get_collision_point()
+		var hit_normal   := _raycast.get_collision_normal()
+		var hit_collider := _raycast.get_collider()
+		var hit_name     : String = hit_collider.name if hit_collider else "unknown"
+
+		print("[HIT] Object: %s | Point: %s | Normal: %s" % [
+			hit_name,
+			str(hit_point.snapped(Vector3(0.01, 0.01, 0.01))),
+			str(hit_normal.snapped(Vector3(0.01, 0.01, 0.01)))
+		])
+
+		# Spawn a brief impact marker at the hit point.
+		_spawn_impact_marker(hit_point, hit_normal)
+	else:
+		print("[HIT] No collision detected.")
+
+
+func _spawn_impact_marker(point: Vector3, normal: Vector3) -> void:
+	# Temporary visual: a small orange sphere at the hit point.
+	# Automatically removed after 2 seconds.
+	var marker := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius    = 0.05
+	sphere.height    = 0.10
+	marker.mesh      = sphere
+
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(1.0, 0.5, 0.0)  # orange
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	marker.material_override = mat
+
+	# Offset slightly off the surface along normal.
+	marker.global_position = point + normal * 0.02
+
+	# Add to the scene tree (sibling of weapon root).
+	get_tree().current_scene.add_child(marker)
+
+	# Auto-remove via timer.
+	var timer := get_tree().create_timer(2.0)
+	timer.timeout.connect(marker.queue_free)
+
+
+# =============================================================================
+# RELOAD
+# =============================================================================
+func _start_reload() -> void:
+	_state = WeaponState.RELOADING
+	_reload_timer = data.reload_time
+	print("[Weapon] Reloading... (%.1fs)" % data.reload_time)
+
+
+func _finish_reload() -> void:
+	var needed : int = data.magazine_size - _current_ammo
+	var taken  : int = min(needed, _reserve_ammo)
+	_current_ammo += taken
+	_reserve_ammo -= taken
+	_state = WeaponState.READY
+	_update_ammo_label()
+	print("[Weapon] Reload complete. Ammo: %d / %d" % [_current_ammo, _reserve_ammo])
+
+
+# =============================================================================
+# RECOIL
+# =============================================================================
+func _apply_recoil() -> void:
+	if _camera == null:
+		return
+	# Vertical kick — upward (negative pitch in Godot).
+	_recoil_pitch += data.recoil_vertical
+	# Horizontal — applied immediately as a random offset.
+	var h_kick : float = randf_range(-data.recoil_horizontal, data.recoil_horizontal)
+	# Apply to CameraMount parent (the Node3D that owns Camera3D).
+	var mount := _camera.get_parent() as Node3D
+	if mount:
+		mount.rotation_degrees.x -= data.recoil_vertical
+		mount.rotation_degrees.x = clamp(mount.rotation_degrees.x, -88.0, 88.0)
+		# Horizontal recoil applied to the CharacterBody3D (grandparent of CameraMount).
+		var body := mount.get_parent() as Node3D
+		if body:
+			body.rotate_y(deg_to_rad(h_kick))
+
+
+func _recover_recoil(delta: float) -> void:
+	if _recoil_pitch <= 0.0 or _camera == null:
+		_recoil_pitch = 0.0
+		return
+	var recovery : float = data.recoil_recovery * delta
+	var applied  : float = min(recovery, _recoil_pitch)
+	_recoil_pitch -= applied
+	var mount := _camera.get_parent() as Node3D
+	if mount:
+		mount.rotation_degrees.x += applied
+		mount.rotation_degrees.x = clamp(mount.rotation_degrees.x, -88.0, 88.0)
+
+
+# =============================================================================
+# TIMERS
+# =============================================================================
+func _tick_fire_timer(delta: float) -> void:
+	if _fire_timer > 0.0:
+		_fire_timer -= delta
+		if _fire_timer <= 0.0:
+			_fire_timer = 0.0
+			if _state == WeaponState.FIRING:
+				_state = WeaponState.READY
+
+
+func _tick_reload_timer(delta: float) -> void:
+	if _state == WeaponState.RELOADING:
+		_reload_timer -= delta
+		if _reload_timer <= 0.0:
+			_reload_timer = 0.0
+			_finish_reload()
+
+
+func _tick_muzzle_flash(delta: float) -> void:
+	if _muzzle_flash.visible:
+		_muzzle_timer -= delta
+		if _muzzle_timer <= 0.0:
+			_muzzle_flash.visible = false
+
+
+# =============================================================================
+# HELPERS
+# =============================================================================
+func _update_ammo_label() -> void:
+	if is_instance_valid(_ammo_label):
+		_ammo_label.text = "%d / %d" % [_current_ammo, _reserve_ammo]
+
+
+## Returns current ammo info for external display (future HUD).
+func get_ammo_info() -> Dictionary:
+	return {
+		"current": _current_ammo,
+		"reserve": _reserve_ammo,
+		"state"  : WeaponState.keys()[_state]
+	}

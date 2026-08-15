@@ -1,30 +1,14 @@
 ﻿# Project FPS — Development Status
 
 **Last Updated:** 2026-08-15
-**Current Milestone:** Milestone 1 — FPS Movement (IN PROGRESS — implementation complete, awaiting playtest)
+**Current Milestone:** Milestone 2 — First Weapon (implementation complete, awaiting playtest)
 
 ---
 
 ## Current Project State
 
-Milestone 1 implementation created. Requires playtest verification in Godot editor.
-No gameplay systems beyond movement. No weapons, health, bots, or multiplayer.
-
----
-
-## What Was Inspected (Milestone 0)
-
-### Files found at inspection time
-
-| File / Folder | Notes |
-|---|---|
-| `project.godot` | Godot 4.7, Compatibility renderer, Jolt Physics, D3D12 on Windows |
-| `Project FPS — Game Bible v1.0.md` | Full 46-section game design document — authoritative spec |
-| `icon.svg` + `icon.svg.import` | Default Godot project icon |
-| `.gitignore` | Correctly ignores `.godot/` and `/android/` |
-| `.gitattributes` | LF normalization configured |
-| `.editorconfig` | UTF-8 charset configured |
-| `.godot/` | Standard Godot editor cache only — no scenes, scripts, or assets |
+Milestone 1 (Movement) — COMPLETE and playtested.
+Milestone 2 (First Weapon) — Implemented, pending playtest verification.
 
 ---
 
@@ -43,164 +27,133 @@ No gameplay systems beyond movement. No weapons, health, bots, or multiplayer.
 ```
 project-fps/
 +-- assets/
-|   +-- models/
-|   |   +-- player/
-|   |   +-- weapons/
-|   |   +-- enemies/
-|   |   +-- environment/
-|   +-- materials/
-|   +-- textures/
-|   +-- animations/
-|   |   +-- player/
-|   |   +-- weapons/
-|   +-- audio/
-|   |   +-- weapons/
-|   |   +-- player/
-|   |   +-- combat/
-|   |   +-- ui/
-|   |   +-- environment/
-|   +-- vfx/
+|   +-- models/ animations/ audio/ materials/ textures/ vfx/
 +-- scenes/
 |   +-- player/
-|   |   +-- player.tscn          [NEW - Milestone 1]
+|   |   +-- player.tscn                       [Milestone 1+2]
 |   +-- weapons/
-|   +-- enemies/
-|   +-- maps/
-|   |   +-- test_arena.tscn      [NEW - Milestone 1]
-|   +-- ui/
-|   +-- gameplay/
+|   |   +-- weapon_base.tscn                  [NEW - Milestone 2]
+|   |   +-- assault_rifle.tscn                [NEW - Milestone 2]
+|   +-- enemies/ maps/ ui/ gameplay/
+|   |   +-- test_arena.tscn                   [Milestone 1, updated M2]
 +-- scripts/
 |   +-- player/
-|   |   +-- player_controller.gd [NEW - Milestone 1]
+|   |   +-- player_controller.gd              [Milestone 1, updated M2]
 |   +-- weapons/
-|   +-- enemies/
-|   +-- gameplay/
-|   +-- systems/
-|   +-- ui/
+|   |   +-- weapon_data.gd                    [NEW - Milestone 2]
+|   |   +-- weapon_base.gd                    [NEW - Milestone 2]
+|   +-- enemies/ gameplay/ systems/ ui/
 +-- data/
     +-- weapons/
-    +-- characters/
-    +-- maps/
-    +-- configuration/
+    |   +-- assault_rifle.tres                [NEW - Milestone 2]
+    +-- characters/ maps/ configuration/
 ```
-
-### Input Actions (configured in project.godot)
-
-| Action | Binding |
-|---|---|
-| `move_forward` | W |
-| `move_backward` | S |
-| `move_left` | A |
-| `move_right` | D |
-| `jump` | Space |
-| `sprint` | Left Shift |
-| `crouch` | Left Ctrl |
-| `fire_primary` | Left Mouse Button |
-| `aim` | Right Mouse Button |
-| `reload` | R |
-| `weapon_next` | Scroll Up |
-| `weapon_prev` | Scroll Down |
-| `weapon_slot_1` | 1 |
-| `weapon_slot_2` | 2 |
 
 ### Implemented Systems
 
 | System | File | Status |
 |---|---|---|
-| PlayerController | `scripts/player/player_controller.gd` | Implemented — needs playtest |
-| Test Arena | `scenes/maps/test_arena.tscn` | Implemented — needs playtest |
-| Player Scene | `scenes/player/player.tscn` | Implemented — needs playtest |
-
-### Planned Modular Systems (NOT yet implemented)
-
-- MovementSystem (currently embedded in PlayerController — may be separated later)
-- CameraSystem
-- WeaponSystem
-- HealthSystem
-- DamageSystem
-- BotSystem
-- MatchSystem
-- SpawnSystem
-- UI
-- AudioSystem
-- VFXSystem
+| PlayerController | scripts/player/player_controller.gd | Complete |
+| WeaponData (Resource) | scripts/weapons/weapon_data.gd | Complete |
+| WeaponBase | scripts/weapons/weapon_base.gd | Complete - needs playtest |
+| WeaponBase Scene | scenes/weapons/weapon_base.tscn | Complete |
+| AssaultRifle Scene | scenes/weapons/assault_rifle.tscn | Complete |
+| AssaultRifle Data | data/weapons/assault_rifle.tres | Complete |
+| Test Arena | scenes/maps/test_arena.tscn | Updated with 3 red targets |
 
 ---
 
-## Milestone 1 — Implementation Summary
+## Milestone 2 — Weapon Architecture
 
-### player_controller.gd — Movement Constants
+### Data Flow
 
-| Constant | Value | Description |
-|---|---|---|
-| `WALK_SPEED` | 7.0 m/s | Normal movement |
-| `SPRINT_SPEED` | 10.0 m/s | Sprinting |
-| `CROUCH_SPEED` | 3.5 m/s | Crouching |
-| `SLIDE_SPEED_START` | 13.0 m/s | Initial slide launch velocity |
-| `SLIDE_SPEED_MIN` | 3.0 m/s | Slide ends below this speed |
-| `SLIDE_FRICTION` | 4.0 m/s^2 | Slide deceleration |
-| `ACCEL_GROUND` | 30.0 m/s^2 | Ground acceleration |
-| `DECEL_GROUND` | 25.0 m/s^2 | Ground deceleration |
-| `ACCEL_AIR` | 8.0 m/s^2 | Air acceleration |
-| `DECEL_AIR` | 4.0 m/s^2 | Air friction |
-| `JUMP_VELOCITY` | 7.5 m/s | Jump launch velocity |
-| `GRAVITY` | 20.0 m/s^2 | Downward acceleration |
-| `MOUSE_SENSITIVITY` | 0.002 rad/px | Mouse look sensitivity |
-| `HEIGHT_STAND` | 1.8 m | Standing capsule height |
-| `HEIGHT_CROUCH` | 1.0 m | Crouching capsule height |
+```
+assault_rifle.tres (WeaponData resource)
+    -> assault_rifle.tscn (instances weapon_base.tscn + assigns data)
+        -> weapon_base.tscn (placeholder mesh + RayCast3D + AmmoLabel)
+            -> weapon_base.gd (all logic)
+                <- player_controller.gd (calls try_fire() / try_reload())
+```
 
-### Movement State Machine
+### Weapon State Machine
 
-States: WALK, SPRINT, CROUCH, SLIDE, AIR
+States: READY, FIRING, RELOADING
 
-Transitions:
-- WALK -> SPRINT: shift held + moving
-- WALK/SPRINT -> CROUCH: ctrl held (not sliding)
-- SPRINT -> SLIDE: shift + ctrl + moving
-- SLIDE -> CROUCH: slide speed drops / ctrl still held
-- SLIDE -> WALK: slide speed drops / ctrl released
-- Any ground -> AIR: jump or fall
-- AIR -> WALK: land on floor
+- READY -> FIRING: fire input pressed, ammo > 0, fire_timer == 0
+- FIRING -> READY: fire_timer expires
+- READY -> RELOADING: R pressed, magazine not full, reserve > 0
+- RELOADING -> READY: reload_timer expires
 
-### test_arena.tscn — Layout
+### Assault Rifle Stats (assault_rifle.tres)
 
-- 40x40m floor
-- 4 boundary walls (height 4m)
-- 5 cover blocks (2x1.5x2m, flat-colored)
-- 1 ramp (tilted ~15 degrees, for slide/jump testing)
-- 1 elevated platform (8x8m at height 3m, jump destination)
-- WorldEnvironment with procedural sky
-- DirectionalLight3D with shadows
+| Property | Value |
+|---|---|
+| damage | 25.0 |
+| headshot_multiplier | 2.0 |
+| fire_rate | 10 rounds/sec |
+| is_automatic | true |
+| magazine_size | 30 |
+| reserve_ammo | 120 |
+| reload_time | 2.0 sec |
+| spread_degrees | 0.5 |
+| range_meters | 100.0 |
+| recoil_vertical | 0.4 deg/shot |
+| recoil_horizontal | 0.15 deg max random |
+| recoil_recovery | 8.0 deg/sec |
+
+### How Firing Works
+
+1. PlayerController._process detects Input.is_action_pressed("fire_primary")
+2. Calls weapon.try_fire() each frame (fire_timer prevents rapid-fire)
+3. weapon_base deducts ammo, runs _do_hitscan(), applies recoil, triggers muzzle flash
+4. RayCast3D (child of weapon root, points forward -Z) reports collision
+5. Hit info printed to debugger, orange sphere spawned at impact point for 2 seconds
+
+### How Reload Works
+
+1. PlayerController._process detects Input.is_action_just_pressed("reload")
+2. Calls weapon.try_reload()
+3. State becomes RELOADING, firing blocked for reload_time seconds
+4. On finish: min(needed, reserve_ammo) rounds transferred to magazine
+
+### Recoil Implementation
+
+- Each shot: camera mount pitched up by recoil_vertical degrees
+- Each shot: body rotated horizontally by random [-recoil_horizontal, +recoil_horizontal] degrees
+- Per frame: accumulated recoil pitch recovered at recoil_recovery degrees/sec
+
+### Test Targets Added
+
+Three bright red CSGBox3D targets in test_arena.tscn:
+- Target_Near: 6m forward
+- Target_Mid: 12m forward + 3m right
+- Target_Far: 18m forward + 3m left
+
+### Debug Output
+
+- Fire: "[Weapon] Fired. Ammo: X / Y"
+- Hit: "[HIT] Object: name | Point: xyz | Normal: xyz"
+- Miss: "[HIT] No collision detected."
+- Dry fire: "[Weapon] DRY FIRE — magazine empty. Press R to reload."
+- Reload: "[Weapon] Reloading... (2.0s)" then "[Weapon] Reload complete. Ammo: X / Y"
+- AmmoLabel3D: visible in-world next to weapon (debug only)
 
 ---
 
-## Playtest Checklist (Required Before Marking Milestone 1 Complete)
+## Playtest Checklist (Required Before Marking Milestone 2 Complete)
 
-- [ ] Test arena loads without errors
-- [ ] Mouse look works (horizontal body rotation + vertical camera clamp)
-- [ ] WASD walk works
-- [ ] Sprint works (Shift)
-- [ ] Jump works (Space), no double-jump
-- [ ] Air control works (directional input in air)
-- [ ] Crouch works (Ctrl), camera lowers
-- [ ] Slide triggers (Sprint + Ctrl + moving), feels fast
-- [ ] Slide ends naturally (speed drops or Ctrl released)
-- [ ] Stand-under-ceiling check works (cannot stand through ceiling)
-- [ ] Player cannot escape arena
-- [ ] Escape key releases mouse cursor
-- [ ] No clipping or jitter observed
-- [ ] Movement feels arcade-fast per Game Bible section 7
-
----
-
-## Known Issues / Notes
-
-- test_arena.tscn uses StaticBody3D + BoxShape3D. MeshInstance3D meshes use BoxMesh.new()
-  which creates a default 1x1x1 mesh — the collisions are correct but meshes will appear
-  as unit cubes in the editor. Visual size mismatch between mesh and collision is expected
-  and can be fixed by setting mesh size properties or switching to CSGBox3D in Milestone 7.
-- Input actions were written by hand in project.godot. Verify in Editor > Project > Input Map.
-- MOUSE_SENSITIVITY default (0.002) may need tuning per individual preference.
+- [ ] Weapon appears correctly in view
+- [ ] LMB fires
+- [ ] Automatic fire respects fire rate
+- [ ] Magazine decreases on each shot
+- [ ] Weapon stops at 0 ammo (dry fire message)
+- [ ] R reloads, blocked during reload
+- [ ] Reserve ammo correctly decreases
+- [ ] Hitscan hits targets (orange markers appear)
+- [ ] Console prints correct hit/miss info
+- [ ] Recoil visible but controllable
+- [ ] No movement regressions
+- [ ] No console errors
 
 ---
 
@@ -209,8 +162,8 @@ Transitions:
 | Milestone | Description | Status |
 |---|---|---|
 | **0 — Foundation** | Project structure, input, git, docs | COMPLETE |
-| **1 — Movement** | CharacterBody3D, mouse look, walk, sprint, jump, crouch, slide | IN PROGRESS |
-| 2 — First Weapon | Weapon view, fire, ammo, reload, recoil, hit detection | Planned |
+| **1 — Movement** | CharacterBody3D, mouse look, walk, sprint, jump, crouch, slide | COMPLETE |
+| **2 — First Weapon** | Weapon data, hitscan, reload, recoil, placeholder geometry | IN PROGRESS |
 | 3 — Combat Loop | Health, damage, death, respawn, score | Planned |
 | 4 — Bot | Navigation, targeting, combat, death, respawn | Planned |
 | 5 — FFA | Multiple bots, score, timer, match end, scoreboard | Planned |
@@ -222,23 +175,15 @@ Transitions:
 
 ---
 
-## Next Planned Task: Milestone 2 — First Weapon
+## Next Planned Task: Milestone 3 — Combat Loop
 
-### Goal
+Prerequisites: Milestone 2 playtested and weapon feel approved.
 
-Implement a basic assault rifle in first-person view.
+Scope:
+1. HealthSystem (Node autoload or CharacterBody3D component)
+2. DamageSystem (receive damage, apply headshot multiplier)
+3. Player death and respawn
+4. Simple kill/score tracking
+5. Basic bot or dummy target to shoot
 
-### Scope
-
-1. Weapon scene attached to camera (`scenes/weapons/assault_rifle.tscn`)
-2. WeaponData resource (`data/weapons/assault_rifle.tres`)
-3. Hitscan fire with raycast
-4. Ammo tracking
-5. Reload state
-6. Recoil (camera kick)
-7. Basic muzzle flash particle or sprite
-8. Hit detection against StaticBody3D (placeholder for future enemy health system)
-
-### Prerequisites
-
-Milestone 1 must be playtested and confirmed working first.
+Do not begin until weapon feel is confirmed.

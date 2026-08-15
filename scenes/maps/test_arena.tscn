@@ -33,6 +33,11 @@ albedo_color = Color(0.4, 0.3, 0.2, 1)
 [sub_resource type="StandardMaterial3D" id="mat_platform"]
 albedo_color = Color(0.25, 0.45, 0.35, 1)
 
+[sub_resource type="StandardMaterial3D" id="mat_target"]
+albedo_color = Color(0.9, 0.15, 0.1, 1)
+roughness = 1.0
+shading_mode = 0
+
 [node name="TestArena" type="Node3D" unique_id=139335502]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1359953952]
@@ -118,3 +123,21 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 3, -10)
 use_collision = true
 size = Vector3(8, 0.5, 8)
 material = SubResource("mat_platform")
+
+[node name="Target_Near" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, -6)
+use_collision = true
+size = Vector3(0.6, 1.0, 0.2)
+material = SubResource("mat_target")
+
+[node name="Target_Mid" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1.0, -12)
+use_collision = true
+size = Vector3(0.6, 1.0, 0.2)
+material = SubResource("mat_target")
+
+[node name="Target_Far" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1.0, -18)
+use_collision = true
+size = Vector3(0.6, 1.0, 0.2)
+material = SubResource("mat_target")

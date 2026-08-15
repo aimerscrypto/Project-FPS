@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Project FPS"
-run/main_scene="res://scenes/player/player.tscn"
+run/main_scene="uid://ciwtdv253nd7q"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 config/main_scene="res://scenes/maps/test_arena.tscn"
