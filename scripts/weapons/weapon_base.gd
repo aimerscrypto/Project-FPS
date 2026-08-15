@@ -189,6 +189,27 @@ func _do_hitscan() -> void:
 			str(hit_normal.snapped(Vector3(0.01, 0.01, 0.01)))
 		])
 
+		# Check whether hit object or its parent is damageable
+		if hit_collider:
+			var dmg_info := DamageInfo.new()
+			dmg_info.amount = data.damage
+			dmg_info.headshot_multiplier = data.headshot_multiplier
+			dmg_info.attacker = _player
+			dmg_info.hit_position = hit_point
+			dmg_info.hit_normal = hit_normal
+			dmg_info.hit_direction = (_raycast.global_transform.basis * _raycast.target_position).normalized()
+			dmg_info.hit_type = DamageInfo.HitType.BODY
+
+			# Dispatch damage cleanly through damageable interface
+			if hit_collider.has_method("take_damage"):
+				hit_collider.take_damage(dmg_info)
+			elif hit_collider.has_node("Health"):
+				var health_node = hit_collider.get_node("Health")
+				if health_node and health_node.has_method("take_damage"):
+					health_node.take_damage(dmg_info)
+			elif hit_collider.get_parent() and hit_collider.get_parent().has_method("take_damage"):
+				hit_collider.get_parent().take_damage(dmg_info)
+
 		# Spawn a brief impact marker at the hit point.
 		_spawn_impact_marker(hit_point, hit_normal)
 	else:

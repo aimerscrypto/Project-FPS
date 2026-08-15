@@ -1,14 +1,15 @@
 # Project FPS — Development Status
 
 **Last Updated:** 2026-08-15
-**Current Milestone:** Milestone 2 — First Weapon (implementation complete, awaiting playtest)
+**Current Milestone:** Milestone 3 — Combat Loop (implementation complete, awaiting playtest)
 
 ---
 
 ## Current Project State
 
-Milestone 1 (Movement) — COMPLETE and playtested.
-Milestone 2 (First Weapon) — Implemented, pending playtest verification.
+- Milestone 1 (Movement) — COMPLETE and playtested.
+- Milestone 2 (First Weapon) — COMPLETE and playtested.
+- Milestone 3 (Combat Loop) — Implemented (Health system, DamageInfo, DummyTarget, Death & Respawn, Kill tracking).
 
 ---
 
@@ -32,20 +33,26 @@ project-fps/
 |   +-- player/
 |   |   +-- player.tscn                       [Milestone 1+2]
 |   +-- weapons/
-|   |   +-- weapon_base.tscn                  [NEW - Milestone 2]
-|   |   +-- assault_rifle.tscn                [NEW - Milestone 2]
-|   +-- enemies/ maps/ ui/ gameplay/
-|   |   +-- test_arena.tscn                   [Milestone 1, updated M2]
+|   |   +-- weapon_base.tscn                  [Milestone 2]
+|   |   +-- assault_rifle.tscn                [Milestone 2]
+|   +-- enemies/
+|   |   +-- dummy_target.tscn                 [NEW - Milestone 3]
+|   +-- maps/
+|   |   +-- test_arena.tscn                   [Milestone 1+2, updated M3]
 +-- scripts/
 |   +-- player/
-|   |   +-- player_controller.gd              [Milestone 1, updated M2]
+|   |   +-- player_controller.gd              [Milestone 1+2, updated M3 with kill tracking]
 |   +-- weapons/
-|   |   +-- weapon_data.gd                    [NEW - Milestone 2]
-|   |   +-- weapon_base.gd                    [NEW - Milestone 2]
-|   +-- enemies/ gameplay/ systems/ ui/
+|   |   +-- weapon_data.gd                    [Milestone 2]
+|   |   +-- weapon_base.gd                    [Milestone 2, updated M3 with damage routing]
+|   +-- enemies/
+|   |   +-- dummy_target.gd                   [NEW - Milestone 3]
+|   +-- systems/
+|   |   +-- health.gd                         [NEW - Milestone 3]
+|   |   +-- damage_info.gd                    [NEW - Milestone 3]
 +-- data/
     +-- weapons/
-    |   +-- assault_rifle.tres                [NEW - Milestone 2]
+    |   +-- assault_rifle.tres                [Milestone 2]
     +-- characters/ maps/ configuration/
 ```
 
@@ -53,112 +60,56 @@ project-fps/
 
 | System | File | Status |
 |---|---|---|
-| PlayerController | scripts/player/player_controller.gd | Complete |
-| WeaponData (Resource) | scripts/weapons/weapon_data.gd | Complete |
-| WeaponBase | scripts/weapons/weapon_base.gd | Complete - needs playtest |
-| WeaponBase Scene | scenes/weapons/weapon_base.tscn | Complete |
-| AssaultRifle Scene | scenes/weapons/assault_rifle.tscn | Complete |
-| AssaultRifle Data | data/weapons/assault_rifle.tres | Complete |
-| Test Arena | scenes/maps/test_arena.tscn | Updated with 3 red targets |
+| PlayerController | `scripts/player/player_controller.gd` | Complete (Movement, Recoil absorption, Kill tracking) |
+| WeaponData (Resource) | `scripts/weapons/weapon_data.gd` | Complete |
+| WeaponBase | `scripts/weapons/weapon_base.gd` | Complete (Hitscan, Damage dispatch, Recoil spray) |
+| Health Component | `scripts/systems/health.gd` | Complete |
+| DamageInfo Class | `scripts/systems/damage_info.gd` | Complete |
+| DummyTarget Entity | `scenes/enemies/dummy_target.tscn` | Complete (100 HP, Damage flash, 3D HP Label, 2s Respawn) |
+| AssaultRifle | `scenes/weapons/assault_rifle.tscn` | Complete |
+| AssaultRifle Data | `data/weapons/assault_rifle.tres` | Complete |
+| Test Arena | `scenes/maps/test_arena.tscn` | Complete (Instanced DummyTargets at 6m, 12m, 18m) |
 
 ---
 
-## Milestone 2 — Weapon Architecture
+## Milestone 3 — Combat Architecture
 
-### Data Flow
+### Combat Data Flow
 
 ```
-assault_rifle.tres (WeaponData resource)
-    -> assault_rifle.tscn (instances weapon_base.tscn + assigns data)
-        -> weapon_base.tscn (placeholder mesh + RayCast3D + AmmoLabel)
-            -> weapon_base.gd (all logic)
-                <- player_controller.gd (calls try_fire() / try_reload())
+WeaponBase (_do_hitscan)
+    │
+    ▼ (creates DamageInfo payload)
+DamageInfo { amount: 25, attacker: Player, hit_point, hit_normal, hit_type }
+    │
+    ▼ (dispatches via take_damage interface)
+DummyTarget.take_damage(DamageInfo)
+    │
+    ▼ (routes to component)
+Health.take_damage(DamageInfo)
+    ├── emits damage_received(DamageInfo, current_hp, max_hp)
+    │     └── DummyTarget updates 3D HP label and triggers visual hit flash
+    └── if current_hp <= 0:
+          ├── emits died(killer)
+          │     ├── DummyTarget disables collision, hides visuals, starts 2.0s timer
+          │     └── PlayerController.record_kill("DummyTarget") increments kill count
+          └── on 2.0s timeout:
+                └── Health.respawn() -> DummyTarget restores collision, visuals, and HP
 ```
-
-### Weapon State Machine
-
-States: READY, FIRING, RELOADING
-
-- READY -> FIRING: fire input pressed, ammo > 0, fire_timer == 0
-- FIRING -> READY: fire_timer expires
-- READY -> RELOADING: R pressed, magazine not full, reserve > 0
-- RELOADING -> READY: reload_timer expires
-
-### Assault Rifle Stats (assault_rifle.tres)
-
-| Property | Value |
-|---|---|
-| damage | 25.0 |
-| headshot_multiplier | 2.0 |
-| fire_rate | 10 rounds/sec |
-| is_automatic | true |
-| magazine_size | 30 |
-| reserve_ammo | 120 |
-| reload_time | 2.0 sec |
-| spread_degrees | 0.5 |
-| range_meters | 100.0 |
-| recoil_vertical | 1.05 deg/shot |
-| recoil_horizontal | 0.35 deg max step |
-| recoil_recovery | 4.5 deg/sec (pitch) / 2.5 deg/sec (yaw) |
-
-### How Firing Works
-
-1. PlayerController._process detects Input.is_action_pressed("fire_primary")
-2. Calls weapon.try_fire() each frame (fire_timer prevents rapid-fire)
-3. weapon_base deducts ammo, runs _do_hitscan(), applies recoil impulse with directional weave tendency via player.apply_recoil(), triggers muzzle flash
-4. RayCast3D (child of weapon root under Camera3D, points forward -Z) reports collision
-5. Hit info printed to debugger, orange sphere spawned at impact point for 2 seconds
-
-### How Reload Works
-
-1. PlayerController._process detects Input.is_action_just_pressed("reload")
-2. Calls weapon.try_reload()
-3. State becomes RELOADING, firing blocked for reload_time seconds
-4. On finish: min(needed, reserve_ammo) rounds transferred to magazine
-
-### Recoil Implementation
-
-- PlayerController owns both mouse look and recoil integration in _physics_process
-- Vertical: shot adds +recoil_vertical (1.05°) to _recoil_pitch, recovers at 4.5°/s (net climb ~0.60°/shot, total ~18° over 30 rounds)
-- Horizontal: weapon_base computes directional tendency and scales initial 3-4 shots for burst accuracy, adding organic spray weaving
-- Horizontal recovery is set to 2.5°/s so lateral spray offsets persist across shots rather than vanishing between frames
-- Two-axis mouse absorption: pulling mouse down or steering against horizontal recoil absorbs the active offsets cleanly without camera dip on fire release
-- CameraMount pitch = clamp(_mouse_pitch + _recoil_pitch)
-- Camera3D yaw = _recoil_yaw
-- Hitscan RayCast3D inherits final camera transform frame-accurately
-
-### Test Targets Added
-
-Three bright red CSGBox3D targets in test_arena.tscn:
-- Target_Near: 6m forward
-- Target_Mid: 12m forward + 3m right
-- Target_Far: 18m forward + 3m left
-
-### Debug Output
-
-- Fire: "[Weapon] Fired. Ammo: X / Y"
-- Hit: "[HIT] Object: name | Point: xyz | Normal: xyz"
-- Miss: "[HIT] No collision detected."
-- Dry fire: "[Weapon] DRY FIRE — magazine empty. Press R to reload."
-- Reload: "[Weapon] Reloading... (2.0s)" then "[Weapon] Reload complete. Ammo: X / Y"
-- AmmoLabel3D: visible in-world next to weapon (debug only)
 
 ---
 
-## Playtest Checklist (Required Before Marking Milestone 2 Complete)
+## Playtest Checklist (Milestone 3)
 
-- [ ] Weapon appears correctly in view
-- [ ] LMB fires
-- [ ] Automatic fire respects fire rate
-- [ ] Magazine decreases on each shot
-- [ ] Weapon stops at 0 ammo (dry fire message)
-- [ ] R reloads, blocked during reload
-- [ ] Reserve ammo correctly decreases
-- [ ] Hitscan hits targets (orange markers appear)
-- [ ] Console prints correct hit/miss info
-- [ ] Recoil visible but controllable
-- [ ] No movement regressions
-- [ ] No console errors
+- [ ] Target HP is visible as a 3D label above the dummy (`100 / 100 HP`)
+- [ ] Shooting the dummy deals 25 damage per body shot (`100 -> 75 -> 50 -> 25 -> 0`)
+- [ ] Console prints `[DAMAGE] DummyTarget took 25 damage. HP: 75/100`
+- [ ] Dummy flashes upon receiving hit
+- [ ] At 0 HP: `[DEATH] DummyTarget killed by Player` and `[KILL] Player eliminated DummyTarget` / `[KILLS] Player: 1`
+- [ ] At death: dummy visuals hide and collision is disabled (subsequent shots do not hit dead target)
+- [ ] After 2 seconds: dummy respawns (`[RESPAWN] DummyTarget respawned. HP: 100/100`) and becomes damageable again
+- [ ] Shooting environment walls/floor does not trigger damage
+- [ ] Movement, jumping, sliding, crouch, and weapon recoil remain completely unchanged
 
 ---
 
@@ -168,8 +119,8 @@ Three bright red CSGBox3D targets in test_arena.tscn:
 |---|---|---|
 | **0 — Foundation** | Project structure, input, git, docs | COMPLETE |
 | **1 — Movement** | CharacterBody3D, mouse look, walk, sprint, jump, crouch, slide | COMPLETE |
-| **2 — First Weapon** | Weapon data, hitscan, reload, recoil, placeholder geometry | IN PROGRESS |
-| 3 — Combat Loop | Health, damage, death, respawn, score | Planned |
+| **2 — First Weapon** | Weapon data, hitscan, reload, recoil, placeholder geometry | COMPLETE |
+| **3 — Combat Loop** | Health, damage, death, respawn, kill tracking | IN PROGRESS (awaiting playtest) |
 | 4 — Bot | Navigation, targeting, combat, death, respawn | Planned |
 | 5 — FFA | Multiple bots, score, timer, match end, scoreboard | Planned |
 | 6 — Combat Polish | Weapon animation, hit VFX, muzzle flash, audio, camera effects | Planned |
@@ -180,15 +131,12 @@ Three bright red CSGBox3D targets in test_arena.tscn:
 
 ---
 
-## Next Planned Task: Milestone 3 — Combat Loop
+## Next Planned Task: Milestone 4 — Bot
 
-Prerequisites: Milestone 2 playtested and weapon feel approved.
+Prerequisites: Milestone 3 playtested and combat loop approved.
 
 Scope:
-1. HealthSystem (Node autoload or CharacterBody3D component)
-2. DamageSystem (receive damage, apply headshot multiplier)
-3. Player death and respawn
-4. Simple kill/score tracking
-5. Basic bot or dummy target to shoot
-
-Do not begin until weapon feel is confirmed.
+1. Navigation mesh / NavigationAgent3D setup in test arena
+2. Bot entity with Health component, movement controller, and weapon
+3. State machine (Patrol / Seek / Engage / Death / Respawn)
+4. Bot targeting and hitscan shooting

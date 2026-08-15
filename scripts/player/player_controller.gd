@@ -117,6 +117,18 @@ func apply_recoil(v_kick: float, h_kick: float, recovery_rate: float) -> void:
 
 
 # =============================================================================
+# COMBAT & KILL TRACKING
+# =============================================================================
+var kills : int = 0
+
+## Called when player eliminates a target
+func record_kill(target_name: String) -> void:
+	kills += 1
+	print("[KILL] Player eliminated %s" % target_name)
+	print("[KILLS] Player: %d" % kills)
+
+
+# =============================================================================
 # INPUT — collect mouse delta here; handle per-frame in _physics_process
 # =============================================================================
 func _input(event: InputEvent) -> void:

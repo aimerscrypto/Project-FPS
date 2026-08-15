@@ -1,12 +1,15 @@
 [gd_scene format=3 uid="uid://ciwtdv253nd7q"]
 
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1_player"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/dummy_target.tscn" id="2_dummy"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_top_color = Color(0.15, 0.18, 0.28, 1)
 sky_horizon_color = Color(0.3, 0.32, 0.4, 1)
 ground_bottom_color = Color(0.1, 0.1, 0.12, 1)
 ground_horizon_color = Color(0.2, 0.22, 0.28, 1)
+sun_angle_max = 30.0
+sun_curve = 0.15
 
 [sub_resource type="Sky" id="sky"]
 sky_material = SubResource("sky_mat")
@@ -17,6 +20,7 @@ sky = SubResource("sky")
 ambient_light_source = 2
 ambient_light_color = Color(0.3, 0.32, 0.38, 1)
 ambient_light_energy = 0.6
+tonemap_mode = 0
 
 [sub_resource type="StandardMaterial3D" id="mat_floor"]
 albedo_color = Color(0.25, 0.25, 0.28, 1)
@@ -32,11 +36,6 @@ albedo_color = Color(0.4, 0.3, 0.2, 1)
 
 [sub_resource type="StandardMaterial3D" id="mat_platform"]
 albedo_color = Color(0.25, 0.45, 0.35, 1)
-
-[sub_resource type="StandardMaterial3D" id="mat_target"]
-albedo_color = Color(0.9, 0.15, 0.1, 1)
-roughness = 1.0
-shading_mode = 0
 
 [node name="TestArena" type="Node3D" unique_id=139335502]
 
@@ -124,20 +123,11 @@ use_collision = true
 size = Vector3(8, 0.5, 8)
 material = SubResource("mat_platform")
 
-[node name="Target_Near" type="CSGBox3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, -6)
-use_collision = true
-size = Vector3(0.6, 1.0, 0.2)
-material = SubResource("mat_target")
+[node name="DummyTarget_Near" parent="." instance=ExtResource("2_dummy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -6)
 
-[node name="Target_Mid" type="CSGBox3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1.0, -12)
-use_collision = true
-size = Vector3(0.6, 1.0, 0.2)
-material = SubResource("mat_target")
+[node name="DummyTarget_Mid" parent="." instance=ExtResource("2_dummy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, -12)
 
-[node name="Target_Far" type="CSGBox3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1.0, -18)
-use_collision = true
-size = Vector3(0.6, 1.0, 0.2)
-material = SubResource("mat_target")
+[node name="DummyTarget_Far" parent="." instance=ExtResource("2_dummy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, -18)
