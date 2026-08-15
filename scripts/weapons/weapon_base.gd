@@ -200,15 +200,15 @@ func _spawn_impact_marker(point: Vector3, normal: Vector3) -> void:
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	marker.material_override = mat
 
-	# Offset slightly off the surface along normal.
-	marker.global_position = point + normal * 0.02
+	# Add to scene tree first, then set global_position.
+	var scene_root := get_tree().current_scene
+	if scene_root:
+		scene_root.add_child(marker)
+		marker.global_position = point + normal * 0.02
 
-	# Add to the scene tree (sibling of weapon root).
-	get_tree().current_scene.add_child(marker)
-
-	# Auto-remove via timer.
-	var timer := get_tree().create_timer(2.0)
-	timer.timeout.connect(marker.queue_free)
+		# Auto-remove via timer.
+		var timer := get_tree().create_timer(2.0)
+		timer.timeout.connect(marker.queue_free)
 
 
 # =============================================================================
