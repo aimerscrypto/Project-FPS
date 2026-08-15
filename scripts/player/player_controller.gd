@@ -78,12 +78,12 @@ func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	# Initialise capsule collision shape to standing height.
 	# CollisionShape3D stays at local origin (0,0,0) — never repositioned.
-	var shape := $CollisionShape3D.shape as CapsuleShape3D
+	var shape := _collision.shape as CapsuleShape3D
 	if shape:
 		shape.height = HEIGHT_STAND
 	# Initialise camera mount to standing eye height above origin.
 	# Origin is capsule centre = floor + HEIGHT_STAND/2, so eye above origin:
-	$CameraMount.position.y = EYE_HEIGHT_STAND - (HEIGHT_STAND * 0.5)
+	_camera_mount.position.y = EYE_HEIGHT_STAND - (HEIGHT_STAND * 0.5)
 
 
 # =============================================================================

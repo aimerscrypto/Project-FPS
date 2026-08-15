@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_script"]
 
-[sub_resource type="CapsuleShape3D" id="1_capsule"]
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.4
 height = 1.8
 
@@ -10,12 +10,9 @@ height = 1.8
 script = ExtResource("1_script")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-# Local position is (0,0,0) — the body origin sits at capsule centre.
-# global_position.y is managed by the controller when height changes.
-shape = SubResource("1_capsule")
+shape = SubResource("CapsuleShape3D_1")
 
 [node name="CameraMount" type="Node3D" parent="."]
-# Y position is set in player_controller._ready() based on EYE_HEIGHT_STAND.
 
 [node name="Camera3D" type="Camera3D" parent="CameraMount"]
 current = true
