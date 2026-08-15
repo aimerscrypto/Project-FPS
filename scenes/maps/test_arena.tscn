@@ -1,13 +1,11 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://cgsweud5y3xgk"]
 
-[ext_resource type="Script" path="res://scripts/maps/test_arena.gd" id="1_7unx2"]
-[ext_resource type="Script" path="res://scripts/gameplay/kill_zone.gd" id="2_sbipn"]
-[ext_resource type="Script" path="res://scripts/gameplay/match_manager.gd" id="3_6hk25"]
-[ext_resource type="Script" path="res://scripts/maps/spawn_point.gd" id="4_evnx7"]
-[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="5_0byj7"]
-[ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="6_7unx2"]
+[ext_resource type="Script" uid="uid://bek0qnaijcjsm" path="res://scripts/maps/test_arena.gd" id="1_7unx2"]
+[ext_resource type="Script" uid="uid://1s36x4h5tl2" path="res://scripts/gameplay/kill_zone.gd" id="2_sbipn"]
+[ext_resource type="Script" uid="uid://cvr02dpn3g66k" path="res://scripts/gameplay/match_manager.gd" id="3_6hk25"]
+[ext_resource type="Script" uid="uid://dt1kmc0i2qy1y" path="res://scripts/maps/spawn_point.gd" id="4_evnx7"]
+[ext_resource type="PackedScene" uid="uid://dfn8uk3u441ap" path="res://scenes/player/player.tscn" id="5_0byj7"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/basic_bot.tscn" id="7_lccqi"]
-[ext_resource type="Script" path="res://scripts/enemies/basic_bot.gd" id="8_sbipn"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_l0avo"]
 sky_top_color = Color(0.28, 0.48, 0.78, 1)
@@ -97,13 +95,13 @@ albedo_color = Color(0.36, 0.32, 0.26, 1)
 roughness = 0.6
 
 [sub_resource type="BoxMesh" id="BoxMesh_h64vd"]
-size = Vector3(8.5, 0.3, 6.5)
+size = Vector3(8.5, 0.3, 6.5424805)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_l0avo"]
 size = Vector3(8.5, 0.3, 6.5)
 
 [sub_resource type="BoxMesh" id="BoxMesh_bea1l"]
-size = Vector3(8.5, 0.3, 6.5)
+size = Vector3(8.5, 0.3, 6.54895)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_0klmf"]
 size = Vector3(2.5, 1.1, 0.8)
@@ -166,16 +164,16 @@ size = Vector3(0.4, 0.9, 14)
 size = Vector3(0.4, 0.9, 14)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_vwur7"]
-size = Vector3(5, 0.3, 10.6)
+size = Vector3(8, 0.3, 10.6)
 
 [sub_resource type="BoxMesh" id="BoxMesh_rau2e"]
-size = Vector3(5, 0.3, 10.6)
+size = Vector3(8, 0.3, 10.6)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_3h14e"]
-size = Vector3(5, 0.3, 10.6)
+size = Vector3(8, 0.3, 10.6)
 
 [sub_resource type="BoxMesh" id="BoxMesh_jdws2"]
-size = Vector3(5, 0.3, 10.6)
+size = Vector3(8, 0.3, 10.644)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_r6pn7"]
 size = Vector3(4, 3.5, 4)
@@ -392,46 +390,39 @@ script = ExtResource("4_evnx7")
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -9.5, 0.9, 0)
 script = ExtResource("4_evnx7")
 
-[node name="Player" type="CharacterBody3D" parent="." unique_id=1075931075 groups=["player"] instance=ExtResource("5_0byj7")]
+[node name="Player" parent="." unique_id=1075931075 instance=ExtResource("5_0byj7")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -3.5, 0.9, 22.5)
-script = ExtResource("6_7unx2")
 
-[node name="BasicBot1" type="CharacterBody3D" parent="." unique_id=1575372781 groups=["combatants"] instance=ExtResource("7_lccqi")]
+[node name="BasicBot1" parent="." unique_id=1575372781 instance=ExtResource("7_lccqi")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 0.9, -22.5)
-script = ExtResource("8_sbipn")
 combatant_name = "Bot 1"
 
-[node name="BasicBot2" type="CharacterBody3D" parent="." unique_id=1502366986 groups=["combatants"] instance=ExtResource("7_lccqi")]
+[node name="BasicBot2" parent="." unique_id=1502366986 instance=ExtResource("7_lccqi")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18.5, 0.9, -21)
-script = ExtResource("8_sbipn")
 combatant_name = "Bot 2"
 
-[node name="BasicBot3" type="CharacterBody3D" parent="." unique_id=52235661 groups=["combatants"] instance=ExtResource("7_lccqi")]
+[node name="BasicBot3" parent="." unique_id=52235661 instance=ExtResource("7_lccqi")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0.9, -21.5)
-script = ExtResource("8_sbipn")
 combatant_name = "Bot 3"
 
-[node name="BasicBot4" type="CharacterBody3D" parent="." unique_id=1348206457 groups=["combatants"] instance=ExtResource("7_lccqi")]
+[node name="BasicBot4" parent="." unique_id=1348206457 instance=ExtResource("7_lccqi")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -18.5, 0.9, 21)
-script = ExtResource("8_sbipn")
 combatant_name = "Bot 4"
 
-[node name="BasicBot5" type="CharacterBody3D" parent="." unique_id=1637587158 groups=["combatants"] instance=ExtResource("7_lccqi")]
+[node name="BasicBot5" parent="." unique_id=1637587158 instance=ExtResource("7_lccqi")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 18, 0.9, 21.5)
-script = ExtResource("8_sbipn")
 combatant_name = "Bot 5"
 
-[node name="BasicBot6" type="CharacterBody3D" parent="." unique_id=21679228 groups=["combatants"] instance=ExtResource("7_lccqi")]
+[node name="BasicBot6" parent="." unique_id=21679228 instance=ExtResource("7_lccqi")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -22, 0.9, 0)
-script = ExtResource("8_sbipn")
 combatant_name = "Bot 6"
 
-[node name="BasicBot7" type="CharacterBody3D" parent="." unique_id=1921303390 groups=["combatants"] instance=ExtResource("7_lccqi")]
+[node name="BasicBot7" parent="." unique_id=1921303390 instance=ExtResource("7_lccqi")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 18, 4.4, 0)
-script = ExtResource("8_sbipn")
 combatant_name = "Bot 7"
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=1722354060]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.019144058, 2.3841858e-07, 0.0025725365)
 navigation_mesh = SubResource("NavigationMesh_bnrc6")
 
 [node name="Floor_West" type="StaticBody3D" parent="NavigationRegion3D" unique_id=908558778]
@@ -515,6 +506,7 @@ transform = Transform3D(1, 0, 0, 0, 0.923076, -0.38461754, 0, 0.38461754, 0.9230
 shape = SubResource("BoxShape3D_uosxl")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/Ramp_Underpass_North" unique_id=1230337510]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.021240234)
 material_override = SubResource("StandardMaterial3D_4hv81")
 mesh = SubResource("BoxMesh_h64vd")
 
@@ -525,6 +517,7 @@ transform = Transform3D(1, 0, 0, 0, 0.92307603, 0.38461757, 0, -0.38461757, 0.92
 shape = SubResource("BoxShape3D_l0avo")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/Ramp_Underpass_South" unique_id=1943558189]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.024475098)
 material_override = SubResource("StandardMaterial3D_4hv81")
 mesh = SubResource("BoxMesh_bea1l")
 
@@ -622,9 +615,11 @@ mesh = SubResource("BoxMesh_rau2e")
 transform = Transform3D(1, 0, 0, 0, 0.94385856, -0.33034965, 0, 0.33034965, 0.94385856, 18, 1.591, 13)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Ramp_HighGround_South" unique_id=758500305]
+transform = Transform3D(1, 0, 0, 0, 1, -8.940697e-08, 0, 8.940697e-08, 1, 0, 0, 0)
 shape = SubResource("BoxShape3D_3h14e")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/Ramp_HighGround_South" unique_id=1010809603]
+transform = Transform3D(1, 0, 0, 0, 1, -8.940697e-08, 0, 8.940697e-08, 1, 0.0038070679, 0, -0.021875381)
 material_override = SubResource("StandardMaterial3D_4hv81")
 mesh = SubResource("BoxMesh_jdws2")
 
