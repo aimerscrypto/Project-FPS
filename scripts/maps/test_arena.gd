@@ -13,4 +13,6 @@ extends Node3D
 
 func _ready() -> void:
 	if _nav_region:
-		_nav_region.bake_navigation_mesh()
+		_nav_region.bake_navigation_mesh(false)
+		var poly_count := _nav_region.navigation_mesh.get_polygon_count() if _nav_region.navigation_mesh else 0
+		print("[NAVMESH] Baked NavMesh. Polygons: %d" % poly_count)

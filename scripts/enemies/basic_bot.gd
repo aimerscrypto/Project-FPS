@@ -4,13 +4,14 @@ extends CharacterBody3D
 # Project FPS — BasicBot
 # Milestone 4 — Basic Bot
 #
-# A simple combat opponent featuring:
+# A reliable combat opponent featuring:
 # - Finite state machine (IDLE, SEARCH, CHASE, ATTACK, DEAD)
-# - NavigationAgent3D pathfinding around obstacles
-# - Line-of-sight raycast detection
-# - Configurable aim error & reaction delay
+# - Robust perception with accurate Line-of-Sight raycast
+# - NavigationAgent3D pathfinding with seamless direct-chase fallback
+# - Smooth rotation aiming with configurable aim error & reaction delay
 # - Hitscan weapon firing with reload cycle and damage delivery
-# - Health component integration with death, damage flash, and respawn
+# - Health component integration with hit flash, death state, and 2.5s respawn
+# - Runtime debug visuals (3D State label & 3D HP label)
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -19,12 +20,12 @@ extends CharacterBody3D
 @export_group("Bot Stats")
 @export var max_health            : float = 100.0
 @export var move_speed            : float = 4.5    # m/s
-@export var turn_speed            : float = 6.0    # lerp rotation speed
+@export var turn_speed            : float = 6.0    # lerp rotation speed (rad/s)
 @export var gravity               : float = 20.0   # m/s² downward pull
 
 @export_group("Perception & Combat")
 @export var detection_range       : float = 25.0   # meters
-@export var combat_range_min      : float = 6.0    # meters (maintain distance)
+@export var combat_range_min      : float = 6.0    # meters (maintain distance / back up)
 @export var combat_range_max      : float = 16.0   # meters (chase if farther)
 @export var attack_fire_rate      : float = 5.0    # rounds per second
 @export var attack_damage         : float = 8.0    # damage per shot
@@ -44,15 +45,19 @@ extends CharacterBody3D
 @onready var _muzzle      : Node3D           = $Visuals/WeaponMesh/Muzzle
 @onready var _muzzle_flash: MeshInstance3D   = $Visuals/WeaponMesh/Muzzle/Flash
 @onready var _hp_label    : Label3D          = $HPLabel
+@onready var _state_label : Label3D          = $StateLabel
 
 # -----------------------------------------------------------------------------
 # STATE MACHINE
 # -----------------------------------------------------------------------------
 enum State { IDLE, SEARCH, CHASE, ATTACK, DEAD }
 
-var _state          : State   = State.IDLE
+var _state          : State   = State.SEARCH
 var _player         : Node3D  = null
 var _spawn_position : Vector3 = Vector3.ZERO
+
+# Perception / logging tracking
+var _player_detected_logged : bool = false
 
 # Combat / weapon runtime state
 var _current_ammo    : int     = 15
@@ -62,6 +67,8 @@ var _reload_timer    : float   = 0.0
 var _reaction_timer  : float   = 0.0
 var _has_los         : bool    = false
 var _muzzle_timer    : float   = 0.0
+var _deflect_timer   : float   = 0.0
+var _deflect_dir     : Vector3 = Vector3.ZERO
 
 # Damage flash materials
 var _mesh_instances : Array[MeshInstance3D] = []
@@ -96,6 +103,7 @@ func _ready() -> void:
 		_muzzle_flash.visible = false
 
 	_update_hp_label()
+	_update_state_label()
 
 
 func _collect_mesh_instances(node: Node) -> void:
@@ -104,6 +112,31 @@ func _collect_mesh_instances(node: Node) -> void:
 		_orig_materials.append(node.material_override)
 	for child in node.get_children():
 		_collect_mesh_instances(child)
+
+
+# =============================================================================
+# STATE MANAGEMENT
+# =============================================================================
+func _set_state(new_state: State) -> void:
+	if _state == new_state:
+		return
+	print("[BOT STATE] %s -> %s" % [State.keys()[_state], State.keys()[new_state]])
+	_state = new_state
+	_update_state_label()
+
+
+func _update_state_label() -> void:
+	if is_instance_valid(_state_label):
+		_state_label.text = "STATE: " + State.keys()[_state]
+		match _state:
+			State.IDLE, State.SEARCH:
+				_state_label.modulate = Color(0.4, 0.9, 1.0, 1.0)  # Cyan
+			State.CHASE:
+				_state_label.modulate = Color(1.0, 0.8, 0.2, 1.0)  # Yellow
+			State.ATTACK:
+				_state_label.modulate = Color(1.0, 0.2, 0.2, 1.0)  # Red
+			State.DEAD:
+				_state_label.modulate = Color(0.5, 0.5, 0.5, 1.0)  # Gray
 
 
 # =============================================================================
@@ -126,7 +159,7 @@ func _physics_process(delta: float) -> void:
 	if _player and is_instance_valid(_player):
 		_process_ai(delta)
 	else:
-		_state = State.IDLE
+		_set_state(State.IDLE)
 		velocity.x = move_toward(velocity.x, 0.0, move_speed * 4.0 * delta)
 		velocity.z = move_toward(velocity.z, 0.0, move_speed * 4.0 * delta)
 
@@ -154,12 +187,22 @@ func _process_ai(delta: float) -> void:
 	var player_pos : Vector3 = _player.global_position
 	var dist : float = global_position.distance_to(player_pos)
 
+	# Detection check & non-spamming logging
+	if dist <= detection_range:
+		if not _player_detected_logged:
+			_player_detected_logged = true
+			print("[BOT] Player detected (Distance: %.1fm)" % dist)
+	else:
+		if _player_detected_logged:
+			_player_detected_logged = false
+			print("[BOT] Player lost (Distance: %.1fm)" % dist)
+
 	# Check Line of Sight
 	_has_los = _check_line_of_sight(player_pos)
 
-	# Outside detection range -> Idle / Search
+	# Outside detection range -> Search / Idle
 	if dist > detection_range:
-		_state = State.SEARCH
+		_set_state(State.SEARCH)
 		_reaction_timer = reaction_delay
 		velocity.x = move_toward(velocity.x, 0.0, move_speed * 4.0 * delta)
 		velocity.z = move_toward(velocity.z, 0.0, move_speed * 4.0 * delta)
@@ -175,11 +218,11 @@ func _process_ai(delta: float) -> void:
 
 		if dist > combat_range_max:
 			# Too far: Chase player
-			_state = State.CHASE
+			_set_state(State.CHASE)
 			_navigate_toward(player_pos, delta)
 		elif dist < combat_range_min:
 			# Too close: Back up slowly while firing
-			_state = State.ATTACK
+			_set_state(State.ATTACK)
 			var away_dir := (global_position - player_pos).normalized()
 			away_dir.y = 0.0
 			velocity.x = away_dir.x * (move_speed * 0.5)
@@ -188,7 +231,7 @@ func _process_ai(delta: float) -> void:
 				_try_fire()
 		else:
 			# In ideal combat range: Stand ground & fire
-			_state = State.ATTACK
+			_set_state(State.ATTACK)
 			velocity.x = move_toward(velocity.x, 0.0, move_speed * 6.0 * delta)
 			velocity.z = move_toward(velocity.z, 0.0, move_speed * 6.0 * delta)
 			if _reaction_timer <= 0.0:
@@ -196,14 +239,19 @@ func _process_ai(delta: float) -> void:
 	else:
 		# Player in range but blocked by obstacles -> Navigate to player
 		_reaction_timer = reaction_delay
-		_state = State.CHASE
+		_set_state(State.CHASE)
 		_navigate_toward(player_pos, delta)
 
 
 func _check_line_of_sight(target_pos: Vector3) -> bool:
 	var space := get_world_3d().direct_space_state
+	if space == null:
+		return false
+
+	# Eye position at bot's head (y=1.4m)
 	var eye_pos := global_position + Vector3(0.0, 1.4, 0.0)
-	var player_target := target_pos + Vector3(0.0, 1.2, 0.0)
+	# Target position at player's torso center (player origin is at y=0.9m)
+	var player_target := target_pos + Vector3(0.0, 0.1, 0.0)
 
 	var query := PhysicsRayQueryParameters3D.create(eye_pos, player_target)
 	query.exclude = [self]
@@ -213,27 +261,59 @@ func _check_line_of_sight(target_pos: Vector3) -> bool:
 		return false
 
 	var collider = result.collider
-	if collider == _player or (collider is Node and collider.get_parent() == _player):
+	if collider == _player:
+		return true
+	if collider is Node and (collider.get_parent() == _player or collider.is_in_group("player") or str(collider.name) == "Player"):
 		return true
 
 	return false
 
 
 func _navigate_toward(target_pos: Vector3, delta: float) -> void:
+	# Update navigation agent target
 	_nav_agent.target_position = target_pos
-	if _nav_agent.is_navigation_finished():
-		velocity.x = move_toward(velocity.x, 0.0, move_speed * 4.0 * delta)
-		velocity.z = move_toward(velocity.z, 0.0, move_speed * 4.0 * delta)
-		return
 
-	var next_pos := _nav_agent.get_next_path_position()
-	var move_dir := (next_pos - global_position).normalized()
+	var move_dir := Vector3.ZERO
+
+	if _deflect_timer > 0.0:
+		_deflect_timer -= delta
+		move_dir = _deflect_dir
+	else:
+		var next_pos := _nav_agent.get_next_path_position()
+		var dist_to_next := global_position.distance_to(next_pos)
+
+		if dist_to_next > 0.2 and not _nav_agent.is_navigation_finished():
+			move_dir = (next_pos - global_position).normalized()
+		else:
+			# Direct fallback toward target
+			move_dir = (target_pos - global_position).normalized()
+
 	move_dir.y = 0.0
+
+	# If colliding with a wall/obstacle while moving, deflect along the wall
+	if is_on_wall():
+		var wall_n := get_wall_normal()
+		var slid := move_dir.slide(wall_n).normalized()
+		if slid.length_squared() > 0.05:
+			move_dir = slid
+			_deflect_dir = slid
+			_deflect_timer = 0.4
+		else:
+			# Head-on collision: steer perpendicular along obstacle edge
+			var tangent := wall_n.cross(Vector3.UP).normalized()
+			var pos_a := global_position + tangent
+			var pos_b := global_position - tangent
+			if pos_a.distance_squared_to(target_pos) < pos_b.distance_squared_to(target_pos):
+				move_dir = tangent
+			else:
+				move_dir = -tangent
+			_deflect_dir = move_dir
+			_deflect_timer = 0.5
 
 	velocity.x = move_dir.x * move_speed
 	velocity.z = move_dir.z * move_speed
 
-	_rotate_toward(next_pos, delta)
+	_rotate_toward(target_pos, delta)
 
 
 func _rotate_toward(target_pos: Vector3, delta: float) -> void:
@@ -291,7 +371,7 @@ func _fire() -> void:
 
 	# Calculate muzzle origin & direction toward player with aim inaccuracy
 	var muzzle_pos := _muzzle.global_position if is_instance_valid(_muzzle) else global_position + Vector3(0.0, 1.2, 0.0)
-	var player_target := _player.global_position + Vector3(0.0, 1.1, 0.0)
+	var player_target := _player.global_position + Vector3(0.0, 0.1, 0.0)
 	var aim_dir := (player_target - muzzle_pos).normalized()
 
 	# Add random angular spread
@@ -362,7 +442,7 @@ func take_damage(info: DamageInfo) -> void:
 func _on_damage_received(_info: DamageInfo, _current_hp: float, _max_hp: float) -> void:
 	_update_hp_label()
 	_flash_hit()
-	# If attacked while idle, immediately alert to player
+	# If attacked while idle or searching, immediately alert bot to player
 	if _state == State.IDLE or _state == State.SEARCH:
 		_reaction_timer = 0.0
 
@@ -378,11 +458,12 @@ func _flash_hit() -> void:
 
 
 func _on_died(killer: Node) -> void:
-	_state = State.DEAD
+	_set_state(State.DEAD)
 	velocity = Vector3.ZERO
 	_collision.set_deferred("disabled", true)
 	_visuals.visible = false
 	_hp_label.visible = false
+	_state_label.visible = false
 
 	var killer_name : String = str(killer.name) if killer else "World"
 	print("[BOT DEATH] Bot killed by %s" % killer_name)
@@ -400,15 +481,17 @@ func _do_respawn() -> void:
 func _on_respawned() -> void:
 	global_position = _spawn_position
 	velocity = Vector3.ZERO
-	_state = State.SEARCH
 	_current_ammo = magazine_size
 	_is_reloading = false
 	_fire_timer = 0.0
 	_reaction_timer = reaction_delay
+	_player_detected_logged = false
 	_collision.set_deferred("disabled", false)
 	_visuals.visible = true
 	_hp_label.visible = true
+	_state_label.visible = true
 	_update_hp_label()
+	_set_state(State.SEARCH)
 	print("[BOT RESPAWN] Bot respawned at %s. HP: %.0f/%.0f" % [
 		str(_spawn_position),
 		_health.current_health if _health else 100.0,

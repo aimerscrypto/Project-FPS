@@ -1,9 +1,8 @@
-[gd_scene load_steps=14 format=3 uid="uid://ciwtdv253nd7q"]
+[gd_scene load_steps=13 format=3 uid="uid://ciwtdv253nd7q"]
 
 [ext_resource type="Script" path="res://scripts/maps/test_arena.gd" id="1_arena"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
-[ext_resource type="PackedScene" path="res://scenes/enemies/dummy_target.tscn" id="3_dummy"]
-[ext_resource type="PackedScene" path="res://scenes/enemies/basic_bot.tscn" id="4_bot"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/basic_bot.tscn" id="3_bot"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_top_color = Color(0.15, 0.18, 0.28, 1)
@@ -58,19 +57,10 @@ light_energy = 1.2
 shadow_enabled = true
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 12)
 
-[node name="BasicBot" parent="." instance=ExtResource("4_bot")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, -8)
-
-[node name="DummyTarget_Near" parent="." instance=ExtResource("3_dummy")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -6)
-
-[node name="DummyTarget_Mid" parent="." instance=ExtResource("3_dummy")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, -12)
-
-[node name="DummyTarget_Far" parent="." instance=ExtResource("3_dummy")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, -18)
+[node name="BasicBot" parent="." instance=ExtResource("3_bot")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -10)
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
 navigation_mesh = SubResource("NavigationMesh_arena")
@@ -106,30 +96,30 @@ size = Vector3(0.5, 4, 40)
 material = SubResource("mat_wall")
 
 [node name="CoverBlock_A1" type="CSGBox3D" parent="NavigationRegion3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.75, -5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.75, -6)
 use_collision = true
 size = Vector3(2, 1.5, 2)
 material = SubResource("mat_cover")
 
 [node name="CoverBlock_A2" type="CSGBox3D" parent="NavigationRegion3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.75, -5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.75, -6)
 use_collision = true
 size = Vector3(2, 1.5, 2)
 material = SubResource("mat_cover")
 
 [node name="CoverBlock_B1" type="CSGBox3D" parent="NavigationRegion3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.75, 5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.75, 6)
 use_collision = true
 size = Vector3(2, 1.5, 2)
 material = SubResource("mat_cover")
 
 [node name="CoverBlock_B2" type="CSGBox3D" parent="NavigationRegion3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.75, 5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.75, 6)
 use_collision = true
 size = Vector3(2, 1.5, 2)
 material = SubResource("mat_cover")
 
-[node name="CoverBlock_C" type="CSGBox3D" parent="NavigationRegion3D"]
+[node name="CoverBlock_Center" type="CSGBox3D" parent="NavigationRegion3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
 use_collision = true
 size = Vector3(2, 1.5, 2)

@@ -98,3 +98,12 @@ modulate = Color(1, 0.4, 0.4, 1)
 text = "100 / 100 HP"
 font_size = 18
 pixel_size = 0.003
+
+[node name="StateLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.15, 0)
+billboard = 2
+no_depth_test = true
+modulate = Color(0.3, 0.9, 1, 1)
+text = "STATE: IDLE"
+font_size = 16
+pixel_size = 0.003
