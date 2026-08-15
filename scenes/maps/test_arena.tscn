@@ -1,62 +1,27 @@
-[gd_scene load_steps=14 format=3 uid="uid://test_arena"]
-
-; ------------------------------------------------------------
-; Test Arena — Milestone 1
-; Purpose: graybox movement testing only.
-; Geometry: CSGBox3D / CSGCombiner3D primitives.
-; No art assets. Tuned for sprint, jump, slide, air control.
-; ------------------------------------------------------------
+[gd_scene load_steps=10 format=3 uid="uid://test_arena"]
 
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="1_player"]
-
-; --- Materials (flat unshaded colors for readability) ---
 
 [sub_resource type="StandardMaterial3D" id="mat_floor"]
 albedo_color = Color(0.25, 0.25, 0.28, 1)
 roughness = 1.0
-metallic = 0.0
 
 [sub_resource type="StandardMaterial3D" id="mat_wall"]
 albedo_color = Color(0.35, 0.35, 0.4, 1)
 roughness = 1.0
-metallic = 0.0
 
 [sub_resource type="StandardMaterial3D" id="mat_cover"]
 albedo_color = Color(0.2, 0.35, 0.5, 1)
 roughness = 1.0
-metallic = 0.0
 
 [sub_resource type="StandardMaterial3D" id="mat_ramp"]
 albedo_color = Color(0.4, 0.3, 0.2, 1)
 roughness = 1.0
-metallic = 0.0
 
 [sub_resource type="StandardMaterial3D" id="mat_platform"]
 albedo_color = Color(0.25, 0.45, 0.35, 1)
 roughness = 1.0
-metallic = 0.0
 
-; --- Collision shapes ---
-
-[sub_resource type="BoxShape3D" id="box_floor"]
-size = Vector3(40, 0.5, 40)
-
-[sub_resource type="BoxShape3D" id="box_wall_long"]
-size = Vector3(40, 4, 0.5)
-
-[sub_resource type="BoxShape3D" id="box_wall_short"]
-size = Vector3(0.5, 4, 40)
-
-[sub_resource type="BoxShape3D" id="box_cover"]
-size = Vector3(2, 1.5, 2)
-
-[sub_resource type="BoxShape3D" id="box_ramp"]
-size = Vector3(6, 0.3, 4)
-
-[sub_resource type="BoxShape3D" id="box_platform"]
-size = Vector3(8, 0.5, 8)
-
-; --- Sky / Environment ---
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_top_color = Color(0.15, 0.18, 0.28, 1)
 sky_horizon_color = Color(0.3, 0.32, 0.4, 1)
@@ -76,149 +41,88 @@ ambient_light_color = Color(0.3, 0.32, 0.38, 1)
 ambient_light_energy = 0.6
 tonemap_mode = 0
 
-; ============================================================
-; SCENE TREE
-; ============================================================
-
 [node name="TestArena" type="Node3D"]
 
-; --- Environment ---
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("env")
 
-; --- Lighting ---
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 10, 0)
+transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0.5, -0.612372, 0.612372, 0, 10, 0)
 light_energy = 1.2
-light_color = Color(1.0, 0.96, 0.88, 1)
+light_color = Color(1, 0.96, 0.88, 1)
 shadow_enabled = true
 
-; --- Player spawn ---
 [node name="Player" parent="." instance=ExtResource("1_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 
-; ===========================================================
-; FLOOR
-; ===========================================================
-[node name="Floor" type="StaticBody3D" parent="."]
+[node name="Floor" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, 0)
+use_collision = true
+size = Vector3(40, 0.5, 40)
+material = SubResource("mat_floor")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Floor"]
-position = Vector3(0, -0.25, 0)
-mesh = BoxMesh.new()
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
-position = Vector3(0, -0.25, 0)
-shape = SubResource("box_floor")
-
-; ===========================================================
-; BOUNDARY WALLS
-; ===========================================================
-
-[node name="WallNorth" type="StaticBody3D" parent="."]
+[node name="WallNorth" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -20)
+use_collision = true
+size = Vector3(40, 4, 0.5)
+material = SubResource("mat_wall")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="WallNorth"]
-mesh = BoxMesh.new()
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="WallNorth"]
-shape = SubResource("box_wall_long")
-
-[node name="WallSouth" type="StaticBody3D" parent="."]
+[node name="WallSouth" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 20)
+use_collision = true
+size = Vector3(40, 4, 0.5)
+material = SubResource("mat_wall")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="WallSouth"]
-mesh = BoxMesh.new()
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="WallSouth"]
-shape = SubResource("box_wall_long")
-
-[node name="WallEast" type="StaticBody3D" parent="."]
+[node name="WallEast" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 2, 0)
+use_collision = true
+size = Vector3(0.5, 4, 40)
+material = SubResource("mat_wall")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="WallEast"]
-mesh = BoxMesh.new()
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="WallEast"]
-shape = SubResource("box_wall_short")
-
-[node name="WallWest" type="StaticBody3D" parent="."]
+[node name="WallWest" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 2, 0)
+use_collision = true
+size = Vector3(0.5, 4, 40)
+material = SubResource("mat_wall")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="WallWest"]
-mesh = BoxMesh.new()
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="WallWest"]
-shape = SubResource("box_wall_short")
-
-; ===========================================================
-; COVER BLOCKS  (symmetrical pairs around centre)
-; ===========================================================
-
-[node name="CoverBlock_A1" type="StaticBody3D" parent="."]
+[node name="CoverBlock_A1" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.75, -5)
+use_collision = true
+size = Vector3(2, 1.5, 2)
+material = SubResource("mat_cover")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="CoverBlock_A1"]
-mesh = BoxMesh.new()
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="CoverBlock_A1"]
-shape = SubResource("box_cover")
-
-[node name="CoverBlock_A2" type="StaticBody3D" parent="."]
+[node name="CoverBlock_A2" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.75, -5)
+use_collision = true
+size = Vector3(2, 1.5, 2)
+material = SubResource("mat_cover")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="CoverBlock_A2"]
-mesh = BoxMesh.new()
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="CoverBlock_A2"]
-shape = SubResource("box_cover")
-
-[node name="CoverBlock_B1" type="StaticBody3D" parent="."]
+[node name="CoverBlock_B1" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.75, 5)
+use_collision = true
+size = Vector3(2, 1.5, 2)
+material = SubResource("mat_cover")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="CoverBlock_B1"]
-mesh = BoxMesh.new()
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="CoverBlock_B1"]
-shape = SubResource("box_cover")
-
-[node name="CoverBlock_B2" type="StaticBody3D" parent="."]
+[node name="CoverBlock_B2" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.75, 5)
+use_collision = true
+size = Vector3(2, 1.5, 2)
+material = SubResource("mat_cover")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="CoverBlock_B2"]
-mesh = BoxMesh.new()
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="CoverBlock_B2"]
-shape = SubResource("box_cover")
-
-[node name="CoverBlock_C" type="StaticBody3D" parent="."]
+[node name="CoverBlock_C" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+use_collision = true
+size = Vector3(2, 1.5, 2)
+material = SubResource("mat_cover")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="CoverBlock_C"]
-mesh = BoxMesh.new()
+[node name="Ramp" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.965926, -0.258819, 0, 0.258819, 0.965926, -10, 0.8, -8)
+use_collision = true
+size = Vector3(6, 0.3, 4)
+material = SubResource("mat_ramp")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="CoverBlock_C"]
-shape = SubResource("box_cover")
-
-; ===========================================================
-; RAMP  (slope for testing slide entry and exit)
-; ===========================================================
-[node name="Ramp" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.966, -0.259, 0, 0.259, 0.966, -10, 1.0, -8)
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Ramp"]
-mesh = BoxMesh.new()
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Ramp"]
-shape = SubResource("box_ramp")
-
-; ===========================================================
-; ELEVATED PLATFORM  (jump destination, high-ground test)
-; ===========================================================
-[node name="Platform" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 3.0, -10)
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Platform"]
-mesh = BoxMesh.new()
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Platform"]
-shape = SubResource("box_platform")
+[node name="Platform" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 3, -10)
+use_collision = true
+size = Vector3(8, 0.5, 8)
+material = SubResource("mat_platform")
