@@ -12,6 +12,9 @@ extends Node3D
 # Attach any WeaponData resource via the Inspector to change weapon behaviour.
 # =============================================================================
 
+const DamageInfo = preload("res://scripts/systems/damage_info.gd")
+const WeaponDataScript = preload("res://scripts/weapons/weapon_data.gd")
+
 
 # -----------------------------------------------------------------------------
 # EXPORTS

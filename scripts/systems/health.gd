@@ -9,6 +9,8 @@ extends Node
 # Uses signals for loose coupling with other systems.
 # =============================================================================
 
+const DamageInfo = preload("res://scripts/systems/damage_info.gd")
+
 class_name Health
 
 signal damage_received(damage_info: DamageInfo, current_hp: float, max_hp: float)

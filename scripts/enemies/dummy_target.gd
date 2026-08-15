@@ -7,6 +7,9 @@ extends StaticBody3D
 # Simple static target for testing hitscan damage, death, and respawn.
 # =============================================================================
 
+const DamageInfo = preload("res://scripts/systems/damage_info.gd")
+const HealthScript = preload("res://scripts/systems/health.gd")
+
 @onready var _health    : Health           = $Health
 @onready var _collision : CollisionShape3D = $CollisionShape3D
 @onready var _visuals   : Node3D           = $Visuals
