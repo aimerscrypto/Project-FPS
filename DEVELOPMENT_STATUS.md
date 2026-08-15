@@ -1,7 +1,7 @@
 # Project FPS — Development Status
 
 **Last Updated:** 2026-08-15  
-**Current Milestone:** Milestone 4 — Basic Bot (Runtime Verified & Fully Operational)
+**Current Milestone:** Milestone 4 — Basic Bot & Combat Feedback Pass (COMPLETE & Runtime Verified)
 
 ---
 
@@ -10,17 +10,20 @@
 - **Milestone 1 (Movement)** — COMPLETE and playtested.
 - **Milestone 2 (First Weapon)** — COMPLETE and playtested.
 - **Milestone 3 (Combat Loop)** — COMPLETE and playtested.
-- **Combat Presentation Fixes**:
-  - **Phase A (Debug Ammo Label):** Removed temporary world-space `Label3D` and update logic from `weapon_base`.
-  - **Phase B (Center Crosshair):** Implemented lightweight 2D `CanvasLayer` crosshair with 4 crisp, screen-centered tick marks.
-- **Milestone 4 (Basic Bot):** COMPLETE & RUNTIME VERIFIED in real Godot engine:
+- **Milestone 4 (Basic Bot):** COMPLETE & RUNTIME VERIFIED:
   - Removed all obsolete static dummy targets from `scenes/maps/test_arena.tscn`.
   - `BasicBot` character with `NavigationAgent3D` + robust direct-chase fallback with tangent obstacle deflection.
   - Precise Line-of-Sight raycast targeting player's torso center.
   - Finite State Machine (`IDLE`, `SEARCH`, `CHASE`, `ATTACK`, `DEAD`) with 3D State Label (`$StateLabel`) and clean console transition logging.
   - Hitscan shooting (8 damage/shot, 5 rounds/sec, 15-round magazine, 2.0s reload) with configurable spread ($3^\circ$) and reaction delay ($0.35$s).
   - Health component integration with hit flash, death state, collision disabling, and 2.5s respawn cycle.
-  - Player health integration with damage logging, death handling, and 2.5s respawn.
+  - Bot holds fire and returns to `SEARCH` state when target dies.
+- **Combat Feedback Pass (Usability & Readability):** COMPLETE & RUNTIME VERIFIED:
+  - **Player Health Display:** Minimal bottom-left 2D HUD (`CombatHUD`) displaying live HP with dynamic white/amber/red color scaling.
+  - **Damage Screen Flash / Vignette:** Immediate red screen flash on damage fading smoothly over 0.3s, retriggerable on rapid hits.
+  - **Camera Hit Reaction:** Subtle camera flinch (pitch/yaw/roll) layered safely with mouse look and weapon recoil without competing overwrites.
+  - **Death Presentation:** Fullscreen dark death overlay with "YOU DIED", killer attribution ("Killed by BasicBot"), and live countdown ("Respawning in 2.5s...").
+  - **Respawn Restoration:** Restores 100 HP, resets camera offsets, hides death overlay, clears damage flash, recaptures mouse, and re-enables inputs.
 
 ---
 
@@ -42,29 +45,32 @@ project-fps/
 │   └── models/ animations/ audio/ materials/ textures/ vfx/
 ├── scenes/
 │   ├── player/
-│   │   └── player.tscn                       [M1+2, updated M4 with Health & CrosshairHUD]
+│   │   └── player.tscn                       [M1-M4: Health, CrosshairHUD, CombatHUD]
 │   ├── weapons/
-│   │   ├── weapon_base.tscn                  [M2, updated M4: AmmoLabel removed]
+│   │   ├── weapon_base.tscn                  [M2]
 │   │   └── assault_rifle.tscn                [M2]
 │   ├── enemies/
-│   │   └── basic_bot.tscn                    [M4 - BasicBot with 3D HP & State labels]
+│   │   └── basic_bot.tscn                    [M4: BasicBot with 3D HP & State labels]
 │   ├── ui/
-│   │   └── crosshair.tscn                    [Phase B - 2D CanvasLayer crosshair]
+│   │   ├── crosshair.tscn                    [Phase B: 2D CanvasLayer crosshair]
+│   │   └── combat_hud.tscn                   [Combat Feedback: HP display, damage flash, death overlay]
 │   └── maps/
-│       └── test_arena.tscn                   [M4 - Clean graybox arena with Bot & NavRegion]
+│       └── test_arena.tscn                   [M4: Graybox arena with Bot & NavRegion]
 ├── scripts/
 │   ├── player/
-│   │   └── player_controller.gd              [M1+2+3, updated M4 with Health & respawn]
+│   │   └── player_controller.gd              [M1-M4: Movement, Recoil, Health, CombatHUD, Camera kick, Respawn]
 │   ├── weapons/
 │   │   ├── weapon_data.gd                    [M2]
-│   │   └── weapon_base.gd                    [M2+3, updated M4: removed AmmoLabel calls]
+│   │   └── weapon_base.gd                    [M2]
 │   ├── enemies/
-│   │   └── basic_bot.gd                      [M4 - Bot AI controller]
+│   │   └── basic_bot.gd                      [M4: Bot AI controller]
+│   ├── ui/
+│   │   └── combat_hud.gd                     [Combat Feedback: 2D HUD controller]
 │   ├── maps/
-│   │   └── test_arena.gd                     [M4 - NavMesh runtime baker]
+│   │   └── test_arena.gd                     [M4: NavMesh runtime baker]
 │   └── systems/
-│       ├── health.gd                         [M3 - Health component with signals & respawn]
-│       └── damage_info.gd                    [M3 - Damage payload data container]
+│       ├── health.gd                         [M3: Health component with signals & respawn]
+│       └── damage_info.gd                    [M3: Damage payload data container]
 └── data/
     ├── weapons/
     │   └── assault_rifle.tres                [M2]
@@ -77,8 +83,9 @@ project-fps/
 
 | System | File | Status |
 |---|---|---|
-| PlayerController | `scripts/player/player_controller.gd` | Complete (Movement, Recoil absorption, Kill tracking, Health integration, Respawn) |
+| PlayerController | `scripts/player/player_controller.gd` | Complete (Movement, Recoil absorption, Camera flinch, Health integration, Respawn) |
 | Crosshair HUD | `scenes/ui/crosshair.tscn` | Complete (2D CanvasLayer, 4 centered ticks, fixed screen-center) |
+| Combat HUD | `scenes/ui/combat_hud.tscn` & `scripts/ui/combat_hud.gd` | Complete (Bottom-left HP display, Damage screen flash, YOU DIED overlay with countdown) |
 | WeaponData (Resource) | `scripts/weapons/weapon_data.gd` | Complete |
 | WeaponBase | `scripts/weapons/weapon_base.gd` | Complete (Hitscan, Damage dispatch, Recoil spray, Debug label removed) |
 | Health Component | `scripts/systems/health.gd` | Complete (damage_received, healed, died, respawned signals) |
@@ -87,12 +94,12 @@ project-fps/
 | BasicBot Scene | `scenes/enemies/basic_bot.tscn` | Complete (Stylized low-poly amber/cyan mesh, Capsule col, 3D HP & State Labels) |
 | AssaultRifle | `scenes/weapons/assault_rifle.tscn` | Complete |
 | AssaultRifle Data | `data/weapons/assault_rifle.tres` | Complete |
-| Test Arena | `scenes/maps/test_arena.tscn` | Complete (Clean layout: Player at South, Bot at North, NavRegion, tactical cover blocks) |
+| Test Arena | `scenes/maps/test_arena.tscn` | Complete (Player at South, Bot at North, NavRegion, tactical cover blocks) |
 | Test Arena Script | `scripts/maps/test_arena.gd` | Complete (NavMesh runtime baker) |
 
 ---
 
-## Milestone 4 — Bot & Combat Flow
+## Combat & Feedback Flow
 
 ```
 +-----------------------------------------------------------------------------------+
@@ -101,8 +108,8 @@ project-fps/
 
      [PLAYER]                                              [BASIC BOT]
   * Fixed 2D Crosshair                                  * Finite State Machine (SEARCH/CHASE/ATTACK/DEAD)
-  * Hitscan Raycast (-Z forward)                        * NavAgent3D + Direct Fallback with Wall Deflection
-  * Health Component (100 HP)                           * Torso-level Line of Sight Raycast Check
+  * CombatHUD (HP 100, Flash, Death UI)                 * NavAgent3D + Direct Fallback with Wall Deflection
+  * Layered Camera (Mouse + Recoil + Flinch)            * Torso-level Line of Sight Raycast Check
         │                                                     │
         │ [Player fires AR]                                   │ [Bot spots Player within 25m]
         ▼                                                     ▼
@@ -115,27 +122,30 @@ project-fps/
         │                                                     │
         ▼ (if Bot HP <= 0)                                    ▼ (take_damage)
   Bot enters DEAD state                                 Player Health reduced (-8)
-  Player.record_kill("BasicBot")                        Player prints damage feedback
-  Bot respawns at origin after 2.5s                           │
+  Player.record_kill("BasicBot")                        CombatHUD triggers Red Flash + updates HP label
+  Bot respawns at origin after 2.5s                     Camera applies subtle hit reaction flinch
+                                                              │
                                                               ▼ (if Player HP <= 0)
                                                         Player enters DEAD state
-                                                        Player respawns at spawn after 2.5s
+                                                        CombatHUD displays "YOU DIED" + Countdown
+                                                        Bot transitions to SEARCH & holds fire
+                                                        Player respawns after 2.5s (HP = 100, HUD restored)
 ```
 
 ---
 
-## Playtest Checklist (Milestone 4 — Runtime Verified)
+## Playtest Checklist (Milestone 4 + Combat Feedback)
 
 - [x] All 3 old static dummy targets removed from `test_arena.tscn`.
-- [x] Debug `AmmoLabel` is removed from the 3D weapon model view.
 - [x] 2D white 4-line crosshair appears fixed in the center of the screen.
-- [x] Firing the assault rifle hits exactly where the crosshair points.
-- [x] `BasicBot` spawns in the arena with an amber body, cyan visor, 3D HP label, and 3D State label.
-- [x] Bot acquires line of sight (LOS) and smoothly rotates to face the player.
-- [x] When player is behind cover/walls, bot does not shoot through walls and navigates around obstacles.
-- [x] Bot engages player with automatic rifle fire (8 damage/shot, 15-round mag, reload cycle).
-- [x] Bot aim incorporates slight inaccuracy/spread ($3.0^\circ$) so it is beatable.
-- [x] Player takes damage when hit by bot bullets (`[PLAYER DAMAGE] Took 8 damage...`).
-- [x] Shooting the bot deals damage, flashes the bot yellow, and reduces bot HP (`[DAMAGE] BasicBot took 25 damage...`).
-- [x] When bot HP reaches 0: bot dies, collision is disabled, visuals hide, player records kill (`[KILL] Player eliminated BasicBot`).
-- [x] Bot respawns after 2.5s (`[BOT RESPAWN] Bot respawned... HP: 100/100`).
+- [x] `BasicBot` spawns with 3D HP label and 3D State label (`SEARCH`, `CHASE`, `ATTACK`, `DEAD`).
+- [x] Bot moves toward player, navigates around cover blocks, aims, and shoots.
+- [x] Bottom-left 2D HUD shows current player health (e.g. `100 HP`).
+- [x] Taking damage triggers an immediate red damage screen flash fading smoothly over 0.3s.
+- [x] Taking damage triggers a subtle camera flinch that does not interfere with mouse look or weapon recoil.
+- [x] Health HUD updates dynamically (`92 HP`, `84 HP`...) and shifts color (White $\to$ Amber $\to$ Red).
+- [x] Upon reaching 0 HP, player enters explicit `is_dead` state:
+  - Input, movement, and weapon firing are stopped.
+  - Fullscreen dark death overlay appears with "YOU DIED", "Killed by BasicBot", and live countdown.
+  - Bot stops firing and returns to `SEARCH` state.
+- [x] After 2.5s respawn timer, player respawns at spawn point with 100 HP, death overlay hides, damage flash clears, camera resets, and full gameplay controls resume.

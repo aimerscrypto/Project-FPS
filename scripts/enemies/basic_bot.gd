@@ -200,6 +200,14 @@ func _process_ai(delta: float) -> void:
 	# Check Line of Sight
 	_has_los = _check_line_of_sight(player_pos)
 
+	# If target is dead, hold fire and enter Search
+	if _player.get("_is_dead") or (_player.has_node("Health") and _player.get_node("Health").is_dead):
+		_set_state(State.SEARCH)
+		_reaction_timer = reaction_delay
+		velocity.x = move_toward(velocity.x, 0.0, move_speed * 4.0 * delta)
+		velocity.z = move_toward(velocity.z, 0.0, move_speed * 4.0 * delta)
+		return
+
 	# Outside detection range -> Search / Idle
 	if dist > detection_range:
 		_set_state(State.SEARCH)

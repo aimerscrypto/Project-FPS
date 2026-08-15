@@ -51,6 +51,7 @@ const HEIGHT_LERP_SPEED : float = 12.0   # how fast the capsule shrinks/grows
 @onready var _camera       : Camera3D        = $CameraMount/Camera3D
 @onready var _collision    : CollisionShape3D = $CollisionShape3D
 @onready var _health       : Health          = $Health
+@onready var _combat_hud   : CanvasLayer     = $CombatHUD
 
 # Weapon reference — resolved at runtime so PlayerController is not tightly
 # coupled to a specific weapon type.
@@ -80,6 +81,12 @@ var _recoil_pitch          : float = 0.0   # Current upward recoil offset (degre
 var _recoil_yaw            : float = 0.0   # Current horizontal recoil offset (degrees)
 var _recoil_recovery_pitch : float = 4.5   # Rate at which vertical recoil recovers (degrees/second)
 var _recoil_recovery_yaw   : float = 2.5   # Rate at which horizontal recoil recovers (degrees/second)
+
+# Damage hit reaction camera kick
+var _damage_kick_pitch     : float = 0.0   # Temporary pitch flinch on damage
+var _damage_kick_yaw       : float = 0.0   # Temporary yaw flinch on damage
+var _damage_kick_roll      : float = 0.0   # Temporary roll flinch on damage
+var _damage_kick_recovery  : float = 14.0  # Rate of damage flinch recovery (degrees/second)
 
 # Prevent holding jump to auto-jump — require a fresh press
 var _jump_consumed  : bool = false
@@ -148,6 +155,14 @@ func take_damage(info: DamageInfo) -> void:
 
 
 func _on_damage_received(info: DamageInfo, current_hp: float, max_hp: float) -> void:
+	if _combat_hud:
+		_combat_hud.show_damage(info, current_hp, max_hp)
+
+	# Subtle camera flinch on hit (layered safely with mouse & recoil)
+	_damage_kick_pitch += randf_range(-1.2, -0.6)
+	_damage_kick_yaw += randf_range(-1.0, 1.0)
+	_damage_kick_roll += randf_range(-1.5, 1.5)
+
 	var attacker_name : String = str(info.attacker.name) if (info and info.attacker) else "Unknown"
 	print("[PLAYER DAMAGE] Took %.0f damage from %s. HP: %.0f/%.0f" % [
 		info.get_final_damage() if info else 0.0,
@@ -158,8 +173,19 @@ func _on_damage_received(info: DamageInfo, current_hp: float, max_hp: float) -> 
 
 
 func _on_died(killer: Node) -> void:
+	if _is_dead:
+		return
 	_is_dead = true
 	velocity = Vector3.ZERO
+	_damage_kick_pitch = 0.0
+	_damage_kick_yaw = 0.0
+	_damage_kick_roll = 0.0
+	_recoil_pitch = 0.0
+	_recoil_yaw = 0.0
+
+	if _combat_hud:
+		_combat_hud.show_death(killer, 2.5)
+
 	var killer_name : String = str(killer.name) if killer else "World"
 	print("[PLAYER DEATH] Player killed by %s" % killer_name)
 
@@ -180,8 +206,17 @@ func _on_respawned() -> void:
 	_mouse_pitch = 0.0
 	_recoil_pitch = 0.0
 	_recoil_yaw = 0.0
+	_damage_kick_pitch = 0.0
+	_damage_kick_yaw = 0.0
+	_damage_kick_roll = 0.0
 	_camera_mount.rotation_degrees.x = 0.0
 	_camera.rotation_degrees.y = 0.0
+	_camera.rotation_degrees.z = 0.0
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+	if _combat_hud:
+		_combat_hud.hide_death()
+
 	print("[PLAYER RESPAWN] Player respawned. HP: %.0f/%.0f" % [
 		_health.current_health if _health else 100.0,
 		_health.max_health if _health else 100.0
@@ -267,17 +302,24 @@ func _handle_mouse_look(delta: float) -> void:
 
 	_mouse_delta = Vector2.ZERO
 
-	# 3. Smooth recoil recovery over time toward rest (0)
+	# 3. Smooth recoil & damage kick recovery over time toward rest (0)
 	if _recoil_pitch != 0.0:
 		_recoil_pitch = move_toward(_recoil_pitch, 0.0, _recoil_recovery_pitch * delta)
 	if _recoil_yaw != 0.0:
 		_recoil_yaw = move_toward(_recoil_yaw, 0.0, _recoil_recovery_yaw * delta)
+	if _damage_kick_pitch != 0.0:
+		_damage_kick_pitch = move_toward(_damage_kick_pitch, 0.0, _damage_kick_recovery * delta)
+	if _damage_kick_yaw != 0.0:
+		_damage_kick_yaw = move_toward(_damage_kick_yaw, 0.0, _damage_kick_recovery * delta)
+	if _damage_kick_roll != 0.0:
+		_damage_kick_roll = move_toward(_damage_kick_roll, 0.0, _damage_kick_recovery * delta)
 
-	# 4. Final camera pitch = base mouse pitch + recoil pitch (clamped safely)
-	_camera_mount.rotation_degrees.x = clamp(_mouse_pitch + _recoil_pitch, CAMERA_PITCH_MIN, CAMERA_PITCH_MAX)
+	# 4. Final camera pitch = base mouse pitch + weapon recoil pitch + damage kick pitch (clamped safely)
+	_camera_mount.rotation_degrees.x = clamp(_mouse_pitch + _recoil_pitch + _damage_kick_pitch, CAMERA_PITCH_MIN, CAMERA_PITCH_MAX)
 
-	# 5. Final camera yaw offset from recoil
-	_camera.rotation_degrees.y = _recoil_yaw
+	# 5. Final camera yaw & roll offsets
+	_camera.rotation_degrees.y = _recoil_yaw + _damage_kick_yaw
+	_camera.rotation_degrees.z = _damage_kick_roll
 
 
 # =============================================================================

@@ -1,0 +1,109 @@
+[gd_scene load_steps=2 format=3 uid="uid://combat_hud_scene"]
+
+[ext_resource type="Script" path="res://scripts/ui/combat_hud.gd" id="1_hud"]
+
+[node name="CombatHUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="DamageFlash" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0, 0, 0)
+
+[node name="HealthDisplay" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = -72.0
+offset_right = 182.0
+offset_bottom = -28.0
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="Background" type="ColorRect" parent="HealthDisplay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.06, 0.07, 0.1, 0.75)
+
+[node name="HealthLabel" type="Label" parent="HealthDisplay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 24
+text = "100 HP"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DeathOverlay" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="DarkBackdrop" type="ColorRect" parent="DeathOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.04, 0.04, 0.06, 0.82)
+
+[node name="CenterBox" type="VBoxContainer" parent="DeathOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -90.0
+offset_right = 200.0
+offset_bottom = 90.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="DeathTitle" type="Label" parent="DeathOverlay/CenterBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.2, 0.2, 1)
+theme_override_font_sizes/font_size = 46
+text = "YOU DIED"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="KillerLabel" type="Label" parent="DeathOverlay/CenterBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.85, 0.9, 1)
+theme_override_font_sizes/font_size = 20
+text = "Killed by BasicBot"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RespawnTimerLabel" type="Label" parent="DeathOverlay/CenterBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.8, 1, 1)
+theme_override_font_sizes/font_size = 17
+text = "Respawning in 2.5s..."
+horizontal_alignment = 1
+vertical_alignment = 1
