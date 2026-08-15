@@ -292,6 +292,15 @@ func _process(_delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	if _is_dead:
 		return
+
+	# Fall / out-of-bounds safety check
+	if global_position.y < -7.0:
+		var fall_dmg := DamageInfo.new()
+		fall_dmg.amount = 9999.0
+		fall_dmg.attacker = null
+		take_damage(fall_dmg)
+		return
+
 	_handle_mouse_look(delta)
 	_handle_movement(delta)
 	_handle_capsule_lerp(delta)

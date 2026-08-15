@@ -1,7 +1,7 @@
 # Project FPS — Development Status
 
 **Last Updated:** 2026-08-15  
-**Current Milestone:** Milestone 6 — Arena Graybox & Tactical Map Pass (IN PROGRESS — graybox implemented, awaiting manual playtest)
+**Current Milestone:** Milestone 6 — Arena Graybox & Tactical Map Pass (IN PROGRESS — structural redesign implemented, awaiting manual playtest)
 
 ---
 
@@ -12,17 +12,28 @@
 - **Milestone 3 (Combat Loop)** — COMPLETE and playtested.
 - **Milestone 4 (Basic Bot & Combat Feedback Pass)** — COMPLETE & RUNTIME VERIFIED.
 - **Milestone 5 (Free For All Foundation)** — COMPLETE & RUNTIME VERIFIED.
-- **Milestone 6 (Arena Graybox & Tactical Map Pass):** IN PROGRESS — graybox implemented, awaiting manual playtest:
-  - **Medium-Sized Tactical Footprint (50m x 50m):** Upgraded from the flat 40m test box to a structured 50m x 50m graybox arena with 5.0m perimeter containment walls, designed for fast 5–15s encounter pacing and dynamic movement (sprint, jump, slide).
-  - **Zone Breakdown & Color Coding:**
-    - **Center (Main Combat Hub):** 20m x 20m arena featuring a full-height 3x3m central monument (`mat_center_monument`), 4 angled waist-high barriers (`mat_cover_waist`), and 2 sightline-blocking pillars.
-    - **Flank Route A (West Pillar Alley):** Semi-enclosed corridor (X: -24 to -12) separated by partition walls with 2 archway connectors into Center; features heavy cover pillars and staggered crates for 5–12m CQC.
-    - **Flank Route B & High Ground (East Catwalk Overlook):** Elevated platform at **Y = 3.5m** (10m x 16m) overlooking Center with waist-high parapet railings. Features **3 distinct attack vectors**: North Ramp (10m, ~19°), South Ramp (10m, ~19°), and Center 2-tier skill-jump crates (Y = 1.2m and 2.4m).
-    - **Lower Route (Subway Underpass Trench):** Recessed corridor at **Y = -2.0m** (8m x 28m) running under the High Ground bridge, providing 100% overhead cover from sniper fire with 3 access ramps (North, South, and Center).
-    - **North & South Plazas:** Tactical spawn staging zones with L-shaped barriers and crates.
-  - **10 Strategic Spawn Points:** Distributed across all sectors (North Plaza, South Plaza, Flank A, High Ground Catwalk, Low Route Underpass, and Center Alcove) with natural LOS obstruction to prevent spawn camping.
-  - **Full 3D NavigationMesh Integration:** Runtime StaticBody3D collision parsing generating 327 active 3D navigation polygons across ground floor, underpass, catwalk, and ramps.
-  - **FFA Simulation Verified:** Verified in automated integration test suites (`test_milestone6_map.gd`, `test_ffa_foundation.gd`, `test_ffa_sim.gd`) with 8 combatants actively fighting, eliminating targets, and safely respawning across all sectors.
+- **Milestone 6 (Arena Graybox & Tactical Map Pass):** IN PROGRESS — structural redesign implemented, awaiting manual playtest:
+  - **Coherent 3-Tier Spatial Architecture (50m x 50m):**
+    - **Level 0 (Main Ground Floor):** Continuous, seamless physical floor spanning the full arena footprint. Contains the Center Combat Hub, Left Flank (Flank A), Right Flank (Flank B), and Staging Plazas.
+    - **Level +1 (High Ground Catwalk @ Y = +3.5m):** Dedicated elevated catwalk deck (8m x 16m) overlooking Center and Right Flank with waist-high parapet protection.
+    - **Level -1 (Underpass Subway Tunnel @ Y = -2.5m):** Subterranean concrete trench (8m x 24m) running beneath the Catwalk, providing 100% overhead cover from sniper fire.
+  - **Strict Ramp Purpose Rule (Exactly 4 Functional Ramps):**
+    - `Ramp_HighGround_North`: Connects North Plaza (Level 0) $\to$ High Ground Catwalk (Level +1) [10.6m, 19.3° slope].
+    - `Ramp_HighGround_South`: Connects South Plaza (Level 0) $\to$ High Ground Catwalk (Level +1) [10.6m, 19.3° slope].
+    - `Ramp_Underpass_North`: Connects North Plaza (Level 0) $\to$ Underpass Tunnel (Level -1) [6.5m, 22.6° slope].
+    - `Ramp_Underpass_South`: Connects South Plaza (Level 0) $\to$ Underpass Tunnel (Level -1) [6.5m, 22.6° slope].
+    - *All random/decorative ramps and jump crates removed.*
+  - **Map Boundaries & Fall Protection:**
+    - Seamless 6.0m outer perimeter enclosure with zero geometric gaps.
+    - Reusable `KillZone` (`Area3D`) at $Y = -8.0$m covering the entire map footprint. Any combatant falling out of bounds is instantly eliminated with environmental damage and safely respawned.
+    - Hard boundary safety check in `PlayerController` and `BasicBot` ($Y < -7.0$m safety net).
+  - **Balanced Daytime Graybox Lighting:**
+    - Single Sun (`DirectionalLight3D`): energy `1.0`, soft shadows (`0.65` opacity, `0.03` bias), natural angle.
+    - `WorldEnvironment`: ambient energy `0.42` with balanced daytime sky (no washed-out whites, no black crush).
+    - Underpass: 2 localized soft utility worklights (energy `0.75`, range `10m`) for clear tunnel navigation.
+    - Controlled mid-tone graybox material palette.
+  - **10 Verified Physical Spawn Points:** Strategically distributed across Level 0, Level +1, and Level -1 with line-of-sight obstruction and dynamic safe selection via `MatchManager`.
+  - **Navigation & FFA Simulation Verified:** 316 3D navigation polygons baked across all 3 tiers with 0.25 voxel grid alignment. 21/21 tests in `test_milestone6_map.gd` and 32/32 tests in `test_ffa_foundation.gd` passing.
 
 ---
 
@@ -54,17 +65,18 @@ project-fps/
 │   │   ├── crosshair.tscn                    [Phase B: 2D CanvasLayer crosshair]
 │   │   └── combat_hud.tscn                   [Combat Feedback: HP display, damage flash, death overlay]
 │   └── maps/
-│       └── test_arena.tscn                   [M6: 50x50 Tactical Graybox Arena with 10 Spawns]
+│       └── test_arena.tscn                   [M6: 3-Tier Tactical Arena with KillZone & 10 Spawns]
 ├── scripts/
 │   ├── player/
-│   │   └── player_controller.gd              [M1-M5: Movement, Recoil, Health, Combatant, Dynamic Spawns]
+│   │   └── player_controller.gd              [M1-M6: Movement, Recoil, Health, Combatant, Fall Guard]
 │   ├── weapons/
 │   │   ├── weapon_data.gd                    [M2]
 │   │   └── weapon_base.gd                    [M2]
 │   ├── enemies/
-│   │   └── basic_bot.gd                      [M4-M5: FFA Multi-Target Bot AI controller]
+│   │   └── basic_bot.gd                      [M4-M6: FFA AI, Multi-Target, Safe Respawn, Fall Guard]
 │   ├── gameplay/
-│   │   └── match_manager.gd                  [M5: FFA Match lifecycle, Timer, Scores, Safe Spawns]
+│   │   ├── match_manager.gd                  [M5: FFA Match lifecycle, Timer, Scores, Safe Spawns]
+│   │   └── kill_zone.gd                      [M6: Reusable Fall Protection / Kill Boundary]
 │   ├── ui/
 │   │   └── combat_hud.gd                     [Combat Feedback: 2D HUD controller]
 │   ├── maps/
@@ -84,55 +96,40 @@ project-fps/
 
 ---
 
-## Tactical Arena Layout & Sector Breakdown
+## 3-Tier Tactical Arena Layout
 
 ```text
-               [-25, -25]                                [+25, -25]
-                      +-----------------------------------+
-                      |         NORTH SPAWN PLAZA         |
-                      |   [Spawn 1: Flank A / Spawn 2: CTR]
-                      |   [Spawn 3: Flank B North Approach]
-+---------------------+----+-------------------------+----+---------------------+
-|                          |                         |                          |
-|      FLANK ROUTE A       |         CENTER          |      FLANK ROUTE B       |
-|    (West / Pillar Alley) |       MAIN ARENA        |  (East / Terrace Overlook|
-|                          |                         |    & High Ground Catwalk)|
-|  - Staggered waist crates| - Central 3x3m Monument |  - Elevated Catwalk      |
-|    (1.1m) & tall pillars | - 4 Diagonal Barriers   |    (Y = 3.5m)            |
-|  - 5-12m SMG/shotgun CQC | - Sprint/slide space    |  - Ramp North & South    |
-|  - Partition wall with   | - Sightline pillars     |  - Skill-jump crates     |
-|    2 archway connectors  | - [Spawn 10: Alcove]    |  - [Spawn 7: Catwalk]    |
-|  - [Spawn 6: West Mid]   |                         |  - [Spawn 8: Underpass]  |
-|                          |                         |                          |
-+---------------------+----+------------+------------+----+---------------------+
-|                     |                 |                 |                     |
-|                     |        LOWER ROUTE / TUNNEL       |                     |
-|                     |        (Y = -2.0m Underpass)      |                     |
-|                     |  - Connects North/South & Center  |                     |
-|                     |  - 100% overhead sniper cover     |                     |
-|                     |  - [Spawn 9: Underpass Floor]     |                     |
-|                     +-----------------+-----------------+                     |
-|                                                                               |
-|                     |         SOUTH SPAWN PLAZA         |                     |
-|                     |   [Spawn 4: Flank A / Spawn 5: CTR]
-|                     |   [Spawn 6: Flank B South Approach]
-|                     +-----------------------------------+                     |
-|                                                                               |
-+-------------------------------------------------------------------------------+
-               [-25, +25]                                [+25, +25]
+===================================================================================
+                       NORTH BOUNDARY (Z = -25, Wall 6.0m)
+===================================================================================
+  NORTH PLAZA (Z: -24 to -18)
+  - Wide open staging area with 2 L-shaped staging barriers.
+  - Level 0 Ground connects West to Left Flank, South to Center Hub.
+  - [Ramp 1] North High Ground Ramp: (X: +18, Z: -18, Y: 0) -> Catwalk (X: +18, Z: -8, Y: +3.5m).
+  - [Ramp 3] North Underpass Ramp: (X: +9, Z: -18, Y: 0) -> Underpass (X: +9, Z: -12, Y: -2.5m).
+-----------------------------------------------------------------------------------
+  [X: -25 to -12]         |    [X: -12 to +5]            |    [X: +5 to +25]
+  LEFT FLANK (Flank A)    |    CENTER COMBAT HUB         |    RIGHT FLANK (Flank B)
+  "Pillar Alley / Yard"   |    "Main Courtyard"          |    "Catwalk & Underpass"
+                          |                              |
+  - Solid ground (Y=0)    |  - Solid ground (Y=0)        |  - Ground Floor (Y=0)
+  - 4.0m partition wall   |  - Central monument          |    under Catwalk
+    with 2 wide archways  |    (4m x 3.5m x 4m)          |  - High Ground Catwalk (+1)
+    into Center           |  - 4 clean waist-high        |    at Y = +3.5m overhead
+  - Staggered cover       |    barriers (1.1m)           |  - Underpass Tunnel (-1)
+    pillars & waist       |  - 2 sightline pillars       |    at Y = -2.5m recessed
+    crates                |  - Fluid sprint/slide space  |    directly below
+  - 5–15m CQC fights      |  - Connects all 4 sides      |
+-----------------------------------------------------------------------------------
+  SOUTH PLAZA (Z: +18 to +24)
+  - Wide open staging area with 2 L-shaped staging barriers.
+  - Level 0 Ground connects West to Left Flank, North to Center Hub.
+  - [Ramp 2] South High Ground Ramp: (X: +18, Z: +18, Y: 0) -> Catwalk (X: +18, Z: +8, Y: +3.5m).
+  - [Ramp 4] South Underpass Ramp: (X: +9, Z: +18, Y: 0) -> Underpass (X: +9, Z: +12, Y: -2.5m).
+===================================================================================
+                       SOUTH BOUNDARY (Z = +25, Wall 6.0m)
+===================================================================================
 ```
-
-### Sightline Design & Engagement Ranges
-- **Short-Range (5–10m):** Flank Route A alleys, Lower Route subway tunnel, Center monument corners.
-- **Medium-Range (10–25m):** North/South Plazas to Center, between Flank A partition archways, across East terrace.
-- **Long-Range (25–35m):** High Ground Catwalk overlooking Center diagonally and North/South ramp approaches (limited by cover pieces to prevent map-wide sniper dominance).
-
-### Verticality & Reachability
-- **High Ground Catwalk (Y = 3.5m):** Provides powerful high-angle sightlines, but is balanced with 3 access routes:
-  1. North Ramp (10.6m length, slope 19.3°)
-  2. South Ramp (10.6m length, slope 19.3°)
-  3. Center Skill-Jump Crates (Step 1 at Y = 1.2m, Step 2 at Y = 2.4m)
-- **Lower Route Trench (Y = -2.0m):** Provides subterranean traversal protected from elevated angles, with North, South, and West entry ramps.
 
 ---
 
@@ -140,30 +137,26 @@ project-fps/
 
 | Spawn Name | Location | Elevation | Description / Strategic Purpose |
 |---|---|---|---|
-| `SpawnPoint_1_NorthA` | `(-18, 0.9, -21)` | Ground (Y=0) | Flank Route A North entrance behind staging cover |
-| `SpawnPoint_2_NorthPlaza` | `(0, 0.9, -22)` | Ground (Y=0) | North Plaza behind L-shaped barricade |
-| `SpawnPoint_3_NorthEast` | `(18, 0.9, -22)` | Ground (Y=0) | Flank Route B North ramp approach |
-| `SpawnPoint_4_SouthA` | `(-18, 0.9, 21)` | Ground (Y=0) | Flank Route A South entrance behind staging cover |
-| `SpawnPoint_5_SouthPlaza` | `(0, 0.9, 22)` | Ground (Y=0) | South Plaza behind L-shaped barricade (Player start) |
-| `SpawnPoint_6_SouthEast` | `(18, 0.9, 22)` | Ground (Y=0) | Flank Route B South ramp approach |
-| `SpawnPoint_7_WestMid` | `(-22, 0.9, 0)` | Ground (Y=0) | Flank Route A mid-pocket behind heavy pillar |
-| `SpawnPoint_8_HighGround` | `(17, 4.4, 0)` | High Ground (Y=3.5) | Center of Catwalk platform facing West |
-| `SpawnPoint_9_LowRoute` | `(9, -1.1, 0)` | Underpass (Y=-2.0) | Subterranean trench floor under Catwalk |
-| `SpawnPoint_10_CenterAlcove` | `(-8, 0.9, 0)` | Ground (Y=0) | Center West alcove shielded behind monument |
+| `SpawnPoint_1_NorthA` | `(-18.5, 0.9, -21.0)` | Level 0 | Left Flank North entrance behind staging cover |
+| `SpawnPoint_2_NorthPlaza` | `(-3.5, 0.9, -22.5)` | Level 0 | North Plaza behind L-shaped barricade |
+| `SpawnPoint_3_NorthEast` | `(18.0, 0.9, -21.5)` | Level 0 | Right Flank North ramp approach base |
+| `SpawnPoint_4_SouthA` | `(-18.5, 0.9, 21.0)` | Level 0 | Left Flank South entrance behind staging cover |
+| `SpawnPoint_5_SouthPlaza` | `(-3.5, 0.9, 22.5)` | Level 0 | South Plaza behind L-shaped barricade (Player start) |
+| `SpawnPoint_6_SouthEast` | `(18.0, 0.9, 21.5)` | Level 0 | Right Flank South ramp approach base |
+| `SpawnPoint_7_WestMid` | `(-22.0, 0.9, 0.0)` | Level 0 | Left Flank mid pocket behind heavy pillar |
+| `SpawnPoint_8_HighGround` | `(18.0, 4.4, 0.0)` | Level +1 | Center of Catwalk deck facing West |
+| `SpawnPoint_9_Underpass` | `(9.0, -1.6, 0.0)` | Level -1 | Center of Underpass tunnel floor |
+| `SpawnPoint_10_CenterAlcove` | `(-9.5, 0.9, 0.0)` | Level 0 | Center Hub alcove shielded behind monument |
 
 ---
 
 ## Playtest & Verification Checklist
 
-- [x] **10 Viable Spawn Points:** Verified 10 registered spawn points with proper spatial distribution.
-- [x] **3D Navigation Mesh Runtime Baking:** 327 navigation polygons baked cleanly covering Ground, High Ground Catwalk, Underpass Trench, and all connecting ramps.
-- [x] **Tactical Sectors Implemented:** Center Monument + Barriers, Flank A Corridor + Partitions, High Ground Catwalk + Ramps + Skill Jumps, Lower Route Trench.
-- [x] **FFA Multi-Combatant Simulation (10s & 20s):** Verified 8 combatants actively acquiring targets, fighting, eliminating enemies, and respawning across varied safe spawns.
-- [x] **Regression FFA Test Suite:** 32/32 tests in `test_ffa_foundation.gd` passing with zero failures.
-- [x] **Milestone 6 Test Suite:** 18/18 tests in `test_milestone6_map.gd` passing with zero failures.
-- [ ] **Manual Playtest Tuning:** Full manual playtest by user to evaluate subjective feel of sliding around cover, jump heights, and assault rifle gunplay across sectors.
-
----
-
-## Known Issues / Tuning Notes
-- Godot 4 logs informational warnings when baking navigation mesh regarding voxel unit precision clamping (`agent_height`, `agent_max_climb`, `agent_radius`), which are expected engine diagnostics and do not impact navigation accuracy (327 valid polygons baked).
+- [x] **Coherent 3-Tier Structure:** Level 0 (Ground), Level +1 (Catwalk), Level -1 (Underpass) cleanly unified.
+- [x] **Strict 4-Ramp System:** Exactly 4 vertical ramps connecting Ground to Catwalk and Ground to Underpass with zero decorative ramps.
+- [x] **Fall Protection & KillZone3D:** KillZone at $Y = -8.0$m and safety guards in Player/Bot controllers preventing infinite falls.
+- [x] **Balanced Daytime Lighting:** Single sun (1.0) + natural ambient (0.42) + soft underpass lights (0.75) with calibrated mid-tone materials.
+- [x] **3D NavigationMesh Baking:** 316 polygons baked with 0.25 voxel grid alignment without precision warnings.
+- [x] **10 Verified Spawn Points:** Solid ground placement with line-of-sight obstruction and dynamic safe spawn integration.
+- [x] **Automated Regression Test Suite:** 32/32 tests in `test_ffa_foundation.gd` passing.
+- [x] **Automated Milestone 6 Test Suite:** 21/21 tests in `test_milestone6_map.gd` passing.

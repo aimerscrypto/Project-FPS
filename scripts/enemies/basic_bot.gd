@@ -183,6 +183,14 @@ func _physics_process(delta: float) -> void:
 			move_and_slide()
 		return
 
+	# Fall / out-of-bounds safety check
+	if global_position.y < -7.0:
+		var fall_dmg := DamageInfo.new()
+		fall_dmg.amount = 9999.0
+		fall_dmg.attacker = null
+		take_damage(fall_dmg)
+		return
+
 	# Apply gravity
 	if not is_on_floor():
 		velocity.y -= gravity * delta

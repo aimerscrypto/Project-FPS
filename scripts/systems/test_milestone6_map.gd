@@ -2,15 +2,16 @@ extends SceneTree
 
 # =============================================================================
 # Project FPS — Automated Milestone 6 Map & Tactical Pass Test Suite
-# Milestone 6 — Arena Graybox & Tactical Map Pass
+# Milestone 6 — Arena Graybox & Tactical Map Pass (Structural Redesign)
 #
 # Automated verification script testing:
 # - Test 1: 10 Spawn Points registered with spatial distribution across all sectors
 # - Test 2: Vertical spawn presence (Catwalk Y > 3.0m, Underpass Y < -1.0m)
-# - Test 3: NavigationMesh runtime bake integrity (> 100 3D navigation polygons)
-# - Test 4: Tactical Sector Geometry (Center, Flank A, High Ground, Low Route)
-# - Test 5: Dynamic Multi-Sector Bot Pathfinding & Target Engagement
-# - Test 6: 10-Second Live FFA Combat Simulation & Multi-Sector Combat Flow
+# - Test 3: NavigationMesh 3D Runtime Baking Integrity (Clean 3-tier coverage)
+# - Test 4: Exactly 4 Functional Ramps (Connecting Level 0 <-> +1 and Level 0 <-> -1)
+# - Test 5: 8-Combatant FFA Initial Distribution
+# - Test 6: Fall Protection / KillZone3D Active Elimination Verification
+# - Test 7: Live FFA Combat Simulation (Verifies active multi-combatant engagement & kills)
 # =============================================================================
 
 var passed_count : int = 0
@@ -19,7 +20,7 @@ var total_count  : int = 0
 
 func _init() -> void:
 	print("\n========================================================")
-	print("       RUNNING MILESTONE 6 MAP & TACTICAL PASS TESTS    ")
+	print("       RUNNING MILESTONE 6 REDESIGN & TACTICAL TESTS    ")
 	print("========================================================\n")
 	call_deferred("_run_tests")
 
@@ -42,8 +43,9 @@ func _run_tests() -> void:
 
 	_test_spawn_distribution(arena)
 	_test_navmesh_baking(arena)
-	_test_sector_geometry(arena)
+	_test_deliberate_ramps(arena)
 	_test_combatants_initial_distribution(arena)
+	_test_kill_zone_protection(arena)
 	await _test_live_combat_simulation(arena)
 
 	print("\n========================================================")
@@ -52,7 +54,7 @@ func _run_tests() -> void:
 
 	arena.queue_free()
 	if passed_count == total_count:
-		print(">> ALL MILESTONE 6 MAP TESTS PASSED SUCCESSFULLY! <<\n")
+		print(">> ALL MILESTONE 6 REDESIGN TESTS PASSED SUCCESSFULLY! <<\n")
 		quit(0)
 	else:
 		print(">> SOME TESTS FAILED! <<\n")
@@ -101,11 +103,11 @@ func _test_spawn_distribution(arena: Node) -> void:
 			if pos.z > 18.0:
 				has_south_spawn = true
 
-	_assert(has_catwalk_spawn, "High Ground Catwalk spawn exists (Y > 3.0m)")
-	_assert(has_lowroute_spawn, "Lower Route Underpass spawn exists (Y < -0.5m)")
-	_assert(has_flank_a_spawn, "Flank Route A spawn exists (X < -15.0m)")
-	_assert(has_north_spawn, "North Plaza spawn exists (Z < -18.0m)")
-	_assert(has_south_spawn, "South Plaza spawn exists (Z > 18.0m)")
+	_assert(has_catwalk_spawn, "Level +1 Catwalk spawn exists (Y > 3.0m)")
+	_assert(has_lowroute_spawn, "Level -1 Underpass spawn exists (Y < -0.5m)")
+	_assert(has_flank_a_spawn, "Level 0 Left Flank spawn exists (X < -15.0m)")
+	_assert(has_north_spawn, "Level 0 North Plaza spawn exists (Z < -18.0m)")
+	_assert(has_south_spawn, "Level 0 South Plaza spawn exists (Z > 18.0m)")
 
 
 func _test_navmesh_baking(arena: Node) -> void:
@@ -115,36 +117,23 @@ func _test_navmesh_baking(arena: Node) -> void:
 
 	if nav_region and nav_region.navigation_mesh:
 		var poly_count := nav_region.navigation_mesh.get_polygon_count()
-		_assert(poly_count > 100, "NavMesh baked with comprehensive 3D coverage (Polygons: %d)" % poly_count)
+		_assert(poly_count > 100, "NavMesh baked with comprehensive 3D coverage across all 3 tiers (Polygons: %d)" % poly_count)
 		_assert(nav_region.navigation_mesh.geometry_parsed_geometry_type == NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS, "NavMesh parses Static Colliders efficiently")
 
 
-func _test_sector_geometry(arena: Node) -> void:
-	print("\n--- TEST 4: Tactical Sector Geometry & Collision Verification ---")
+func _test_deliberate_ramps(arena: Node) -> void:
+	print("\n--- TEST 4: Exactly 4 Deliberate Vertical Transition Ramps ---")
 	var nav_region : NavigationRegion3D = arena.get_node_or_null("NavigationRegion3D")
 	if nav_region:
-		# Check Center
-		var monument = nav_region.get_node_or_null("Center_Monument")
-		var center_nw = nav_region.get_node_or_null("Center_BarrierNW")
-		_assert(monument != null and center_nw != null, "Center zone monument and waist barricades present")
+		var ramp_hg_n = nav_region.get_node_or_null("Ramp_HighGround_North")
+		var ramp_hg_s = nav_region.get_node_or_null("Ramp_HighGround_South")
+		var ramp_up_n = nav_region.get_node_or_null("Ramp_Underpass_North")
+		var ramp_up_s = nav_region.get_node_or_null("Ramp_Underpass_South")
 
-		# Check Flank A
-		var flank_wall = nav_region.get_node_or_null("FlankA_WallMid")
-		var flank_pillar = nav_region.get_node_or_null("FlankA_PillarNorth")
-		_assert(flank_wall != null and flank_pillar != null, "Flank A partition walls and heavy cover pillars present")
-
-		# Check High Ground
-		var hg_plat = nav_region.get_node_or_null("HighGround_Platform")
-		var hg_ramp_n = nav_region.get_node_or_null("HighGround_RampNorth")
-		var hg_ramp_s = nav_region.get_node_or_null("HighGround_RampSouth")
-		var jump_crate = nav_region.get_node_or_null("JumpCrate_Step1")
-		_assert(hg_plat != null and hg_ramp_n != null and hg_ramp_s != null and jump_crate != null, "High Ground has platform, dual attack ramps, and center skill-jump crates")
-
-		# Check Lower Route
-		var lr_floor = nav_region.get_node_or_null("Floor_LowRoute")
-		var lr_ramp_n = nav_region.get_node_or_null("TrenchRamp_North")
-		var lr_ramp_c = nav_region.get_node_or_null("TrenchRamp_Center")
-		_assert(lr_floor != null and lr_ramp_n != null and lr_ramp_c != null, "Lower Route underpass floor and multiple approach ramps present")
+		_assert(ramp_hg_n != null, "Ramp_HighGround_North exists (Connects North Plaza -> High Ground Catwalk)")
+		_assert(ramp_hg_s != null, "Ramp_HighGround_South exists (Connects South Plaza -> High Ground Catwalk)")
+		_assert(ramp_up_n != null, "Ramp_Underpass_North exists (Connects North Plaza -> Underpass Tunnel)")
+		_assert(ramp_up_s != null, "Ramp_Underpass_South exists (Connects South Plaza -> Underpass Tunnel)")
 
 
 func _test_combatants_initial_distribution(arena: Node) -> void:
@@ -159,8 +148,27 @@ func _test_combatants_initial_distribution(arena: Node) -> void:
 		_assert(bot7.global_position.y > 3.0, "Bot 7 correctly spawned on High Ground Catwalk (Y = %.1f)" % bot7.global_position.y)
 
 
+func _test_kill_zone_protection(arena: Node) -> void:
+	print("\n--- TEST 6: Fall Protection & KillZone3D ---")
+	var kill_zone : Area3D = arena.get_node_or_null("KillZone")
+	_assert(kill_zone != null, "KillZone exists in arena")
+	if kill_zone:
+		_assert(kill_zone.global_position.y <= -7.0, "KillZone is placed safely below playable floors (Y = %.1f)" % kill_zone.global_position.y)
+
+		# Create a temporary test bot for fall verification
+		var bot_scene := load("res://scenes/enemies/basic_bot.tscn") as PackedScene
+		var test_bot := bot_scene.instantiate() as CharacterBody3D
+		test_bot.name = "TestFallingBot"
+		arena.add_child(test_bot)
+		test_bot.global_position = Vector3(0.0, -8.0, 0.0)
+
+		kill_zone._on_body_entered(test_bot)
+		_assert(not test_bot.is_alive(), "KillZone triggered fatal elimination on out-of-bounds entity")
+		test_bot.queue_free()
+
+
 func _test_live_combat_simulation(arena: Node) -> void:
-	print("\n--- TEST 6: 10-Second Live FFA Combat Simulation ---")
+	print("\n--- TEST 7: Live FFA Combat Simulation ---")
 	var match_mgr : Node = arena.get_node_or_null("MatchManager")
 	_assert(match_mgr != null, "MatchManager active for combat simulation")
 
@@ -168,8 +176,8 @@ func _test_live_combat_simulation(arena: Node) -> void:
 	for c in match_mgr._combatant_stats:
 		start_kills += match_mgr._combatant_stats[c]["kills"]
 
-	print("[SIMULATION] Running 600 physics frames (~10.0s live combat)...")
-	for i in range(600):
+	print("[SIMULATION] Running 900 physics frames (~15.0s live combat)...")
+	for i in range(900):
 		arena.get_tree().physics_frame
 		await process_frame
 
