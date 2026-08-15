@@ -10,11 +10,12 @@ height = 1.8
 script = ExtResource("1_script")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-position = Vector3(0, 0.9, 0)
+# Local position is (0,0,0) — the body origin sits at capsule centre.
+# global_position.y is managed by the controller when height changes.
 shape = SubResource("1_capsule")
 
 [node name="CameraMount" type="Node3D" parent="."]
-position = Vector3(0, 1.65, 0)
+# Y position is set in player_controller._ready() based on EYE_HEIGHT_STAND.
 
 [node name="Camera3D" type="Camera3D" parent="CameraMount"]
 current = true

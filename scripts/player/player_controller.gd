@@ -41,9 +41,7 @@ const HEIGHT_STAND      : float = 1.8
 const HEIGHT_CROUCH     : float = 1.0
 const HEIGHT_LERP_SPEED : float = 12.0   # how fast the capsule shrinks/grows
 
-# Camera vertical offset from capsule centre (eye height relative to capsule top)
-const CAM_OFFSET_STAND  : float = 0.75   # 0 = centre, positive = above centre
-const CAM_OFFSET_CROUCH : float = 0.1
+# Eye heights are defined inside the CAPSULE HEIGHT MANAGEMENT section below.
 
 
 # -----------------------------------------------------------------------------
@@ -78,7 +76,14 @@ var _jump_consumed  : bool = false
 # =============================================================================
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	_set_capsule_height(HEIGHT_STAND)
+	# Initialise capsule collision shape to standing height.
+	# CollisionShape3D stays at local origin (0,0,0) — never repositioned.
+	var shape := $CollisionShape3D.shape as CapsuleShape3D
+	if shape:
+		shape.height = HEIGHT_STAND
+	# Initialise camera mount to standing eye height above origin.
+	# Origin is capsule centre = floor + HEIGHT_STAND/2, so eye above origin:
+	$CameraMount.position.y = EYE_HEIGHT_STAND - (HEIGHT_STAND * 0.5)
 
 
 # =============================================================================
@@ -279,40 +284,80 @@ func _handle_jump() -> void:
 
 # =============================================================================
 # CAPSULE HEIGHT MANAGEMENT
+#
+# Design:
+#   - CharacterBody3D origin sits at the capsule centre.
+#   - CollisionShape3D stays at local position (0, 0, 0) — never moved.
+#     Moving the child would shift the collision relative to the body and cause
+#     the physics engine to issue a floor-correction impulse, producing jitter.
+#   - Instead, when the capsule grows (stand up), we shift global_position.y UP
+#     by half the height increase so the capsule bottom stays on the floor.
+#   - Camera target is a smoothly interpolated eye-height above the floor,
+#     not a binary snap between two offsets.
 # =============================================================================
+
+# Eye heights above the floor (not above the capsule centre).
+const EYE_HEIGHT_STAND  : float = 1.65   # metres above feet when standing
+const EYE_HEIGHT_CROUCH : float = 0.75   # metres above feet when crouched
+
+# Separate tracked variable for the camera's current eye height (above floor).
+var _current_eye_height : float = EYE_HEIGHT_STAND
+
+
 func _handle_capsule_lerp(delta: float) -> void:
 	var target_height := HEIGHT_STAND
+	var target_eye    := EYE_HEIGHT_STAND
 
 	if _state == MoveState.CROUCH or _state == MoveState.SLIDE:
 		target_height = HEIGHT_CROUCH
+		target_eye    = EYE_HEIGHT_CROUCH
 
-	if not is_equal_approx(_current_height, target_height):
-		# Check for ceiling before standing up
-		if target_height > _current_height and _is_ceiling_blocking():
-			return  # stay crouched
+	# --- Capsule height ---
+	var height_diff := target_height - _current_height
+	if abs(height_diff) > 0.001:
+		# If growing (standing up), check for ceiling first.
+		if height_diff > 0.0 and _is_ceiling_blocking():
+			# Blocked — also pin camera to crouch height so it doesn't drift.
+			target_eye = EYE_HEIGHT_CROUCH
+		else:
+			var new_height := lerp(_current_height, target_height, HEIGHT_LERP_SPEED * delta)
+			# Snap to target when close enough to avoid permanent asymptote.
+			if abs(new_height - target_height) < 0.002:
+				new_height = target_height
 
-		_current_height = lerp(_current_height, target_height, HEIGHT_LERP_SPEED * delta)
-		_set_capsule_height(_current_height)
+			var delta_h := new_height - _current_height
+			_current_height = new_height
 
+			# Resize the capsule shape in place.
+			var shape := _collision.shape as CapsuleShape3D
+			if shape:
+				shape.height = _current_height
+			# DO NOT move _collision — it stays at local origin (0,0,0).
+			# Instead, shift the body upward by half the increase so the
+			# bottom of the capsule tracks the floor.
+			global_position.y += delta_h * 0.5
 
-func _set_capsule_height(h: float) -> void:
-	var shape := _collision.shape as CapsuleShape3D
-	if shape == null:
-		return
-	shape.height = h
-	# Keep capsule bottom fixed on the ground by raising the collision node
-	_collision.position.y = h * 0.5
-
-	# Move camera mount — eye position is offset from capsule top
-	var cam_offset := CAM_OFFSET_STAND if h >= HEIGHT_STAND - 0.05 else CAM_OFFSET_CROUCH
-	_camera_mount.position.y = (h * 0.5) + cam_offset
+	# --- Camera eye height (always lerped, independent of capsule) ---
+	_current_eye_height = lerp(_current_eye_height, target_eye, HEIGHT_LERP_SPEED * delta)
+	if abs(_current_eye_height - target_eye) < 0.002:
+		_current_eye_height = target_eye
+	# Camera mount sits at eye height above the body's current origin.
+	# Body origin = capsule centre = floor + height/2.
+	# Eye height above origin = eye_height_above_floor - height/2.
+	_camera_mount.position.y = _current_eye_height - (_current_height * 0.5)
 
 
 func _is_ceiling_blocking() -> bool:
-	# Cast a short ray upward to check for a ceiling before standing
+	# Shape-cast the full standing capsule from the current position to detect
+	# any ceiling that would prevent standing. Uses a point check at the
+	# height the top of the standing capsule would reach.
 	var space  := get_world_3d().direct_space_state
+	# Current capsule bottom in world space:
+	var feet_y := global_position.y - (_current_height * 0.5)
+	# Where the top of the standing capsule would be:
+	var top_y  := feet_y + HEIGHT_STAND
 	var origin := global_position
-	var target := origin + Vector3.UP * (HEIGHT_STAND + 0.05)
+	var target := Vector3(origin.x, top_y + 0.05, origin.z)
 	var query  := PhysicsRayQueryParameters3D.create(origin, target, collision_mask)
 	query.exclude = [self]
 	var result := space.intersect_ray(query)
