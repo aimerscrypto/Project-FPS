@@ -1,14 +1,20 @@
-[gd_scene load_steps=4 format=3 uid="uid://player_scene"]
+[gd_scene load_steps=6 format=3 uid="uid://player_scene"]
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://scenes/weapons/assault_rifle.tscn" id="2_rifle"]
+[ext_resource type="PackedScene" path="res://scenes/ui/crosshair.tscn" id="3_crosshair"]
+[ext_resource type="Script" path="res://scripts/systems/health.gd" id="4_health"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.4
 height = 1.8
 
-[node name="Player" type="CharacterBody3D"]
+[node name="Player" type="CharacterBody3D" groups=["player"]]
 script = ExtResource("1_script")
+
+[node name="Health" type="Node" parent="."]
+script = ExtResource("4_health")
+max_health = 100.0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("CapsuleShape3D_1")
@@ -20,3 +26,5 @@ current = true
 fov = 90.0
 
 [node name="AssaultRifle" parent="CameraMount/Camera3D" instance=ExtResource("2_rifle")]
+
+[node name="CrosshairHUD" parent="." instance=ExtResource("3_crosshair")]

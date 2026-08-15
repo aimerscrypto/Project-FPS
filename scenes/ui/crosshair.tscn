@@ -1,0 +1,59 @@
+[gd_scene format=3 uid="uid://crosshair_ui"]
+
+[node name="CrosshairHUD" type="CanvasLayer"]
+
+[node name="CrosshairControl" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Center" type="Control" parent="CrosshairControl"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Top" type="ColorRect" parent="CrosshairControl/Center"]
+layout_mode = 0
+offset_left = -1.0
+offset_top = -10.0
+offset_right = 1.0
+offset_bottom = -4.0
+mouse_filter = 2
+color = Color(1, 1, 1, 0.9)
+
+[node name="Bottom" type="ColorRect" parent="CrosshairControl/Center"]
+layout_mode = 0
+offset_left = -1.0
+offset_top = 4.0
+offset_right = 1.0
+offset_bottom = 10.0
+mouse_filter = 2
+color = Color(1, 1, 1, 0.9)
+
+[node name="Left" type="ColorRect" parent="CrosshairControl/Center"]
+layout_mode = 0
+offset_left = -10.0
+offset_top = -1.0
+offset_right = -4.0
+offset_bottom = 1.0
+mouse_filter = 2
+color = Color(1, 1, 1, 0.9)
+
+[node name="Right" type="ColorRect" parent="CrosshairControl/Center"]
+layout_mode = 0
+offset_left = 4.0
+offset_top = -1.0
+offset_right = 10.0
+offset_bottom = 1.0
+mouse_filter = 2
+color = Color(1, 1, 1, 0.9)

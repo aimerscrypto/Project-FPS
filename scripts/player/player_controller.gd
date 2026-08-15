@@ -11,6 +11,9 @@ extends CharacterBody3D
 # All tuning constants are grouped here for easy iteration during playtesting.
 # =============================================================================
 
+const DamageInfo = preload("res://scripts/systems/damage_info.gd")
+const HealthScript = preload("res://scripts/systems/health.gd")
+
 
 # -----------------------------------------------------------------------------
 # MOVEMENT CONSTANTS  (tune these during playtesting)
@@ -51,6 +54,7 @@ const HEIGHT_LERP_SPEED : float = 12.0   # how fast the capsule shrinks/grows
 @onready var _camera_mount : Node3D          = $CameraMount
 @onready var _camera       : Camera3D        = $CameraMount/Camera3D
 @onready var _collision    : CollisionShape3D = $CollisionShape3D
+@onready var _health       : Health          = $Health
 
 # Weapon reference — resolved at runtime so PlayerController is not tightly
 # coupled to a specific weapon type.
@@ -65,6 +69,8 @@ enum MoveState { WALK, SPRINT, CROUCH, SLIDE, AIR }
 var _state          : MoveState = MoveState.WALK
 var _is_sliding     : bool      = false
 var _slide_velocity : Vector3   = Vector3.ZERO
+var _is_dead        : bool      = false
+var _spawn_position : Vector3   = Vector3.ZERO
 
 # Capsule dimensions tracked for smooth lerp
 var _current_height : float = HEIGHT_STAND
@@ -97,6 +103,12 @@ func _ready() -> void:
 	# Origin is capsule centre = floor + HEIGHT_STAND/2, so eye above origin:
 	_camera_mount.position.y = EYE_HEIGHT_STAND - (HEIGHT_STAND * 0.5)
 	_mouse_pitch = _camera_mount.rotation_degrees.x
+	_spawn_position = global_position
+	# Connect health signals
+	if _health:
+		_health.damage_received.connect(_on_damage_received)
+		_health.died.connect(_on_died)
+		_health.respawned.connect(_on_respawned)
 	# Give the weapon references so recoil and camera are linked.
 	if _weapon:
 		if _weapon.has_method("set_player"):
@@ -117,7 +129,7 @@ func apply_recoil(v_kick: float, h_kick: float, recovery_rate: float) -> void:
 
 
 # =============================================================================
-# COMBAT & KILL TRACKING
+# COMBAT, DAMAGE & KILL TRACKING
 # =============================================================================
 var kills : int = 0
 
@@ -128,12 +140,64 @@ func record_kill(target_name: String) -> void:
 	print("[KILLS] Player: %d" % kills)
 
 
+## Damageable interface entrypoint
+func take_damage(info: DamageInfo) -> void:
+	if _is_dead:
+		return
+	if _health:
+		_health.take_damage(info)
+	elif has_node("Health"):
+		_health = $Health
+		_health.take_damage(info)
+
+
+func _on_damage_received(info: DamageInfo, current_hp: float, max_hp: float) -> void:
+	var attacker_name : String = info.attacker.name if (info and info.attacker) else "Unknown"
+	print("[PLAYER DAMAGE] Took %.0f damage from %s. HP: %.0f/%.0f" % [
+		info.get_final_damage() if info else 0.0,
+		attacker_name,
+		current_hp,
+		max_hp
+	])
+
+
+func _on_died(killer: Node) -> void:
+	_is_dead = true
+	velocity = Vector3.ZERO
+	var killer_name : String = killer.name if killer else "World"
+	print("[PLAYER DEATH] Player killed by %s" % killer_name)
+
+	# Prototype respawn after 2.5 seconds
+	var timer := get_tree().create_timer(2.5)
+	timer.timeout.connect(_do_respawn)
+
+
+func _do_respawn() -> void:
+	if _health:
+		_health.respawn()
+
+
+func _on_respawned() -> void:
+	_is_dead = false
+	global_position = _spawn_position
+	velocity = Vector3.ZERO
+	_mouse_pitch = 0.0
+	_recoil_pitch = 0.0
+	_recoil_yaw = 0.0
+	_camera_mount.rotation_degrees.x = 0.0
+	_camera.rotation_degrees.y = 0.0
+	print("[PLAYER RESPAWN] Player respawned. HP: %.0f/%.0f" % [
+		_health.current_health if _health else 100.0,
+		_health.max_health if _health else 100.0
+	])
+
+
 # =============================================================================
 # INPUT — collect mouse delta here; handle per-frame in _physics_process
 # =============================================================================
 func _input(event: InputEvent) -> void:
-	# Mouse look accumulation
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+	# Mouse look accumulation (only when alive)
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not _is_dead:
 		_mouse_delta += event.relative
 
 	# Toggle mouse capture with Escape
@@ -148,7 +212,7 @@ func _input(event: InputEvent) -> void:
 # PROCESS — weapon input only (does not affect physics / movement)
 # =============================================================================
 func _process(_delta: float) -> void:
-	if _weapon == null:
+	if _is_dead or _weapon == null:
 		return
 	# Automatic fire: hold to fire.
 	if Input.is_action_pressed("fire_primary"):
@@ -162,6 +226,8 @@ func _process(_delta: float) -> void:
 # PHYSICS PROCESS
 # =============================================================================
 func _physics_process(delta: float) -> void:
+	if _is_dead:
+		return
 	_handle_mouse_look(delta)
 	_handle_movement(delta)
 	_handle_capsule_lerp(delta)

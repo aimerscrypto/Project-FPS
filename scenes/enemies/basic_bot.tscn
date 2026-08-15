@@ -1,0 +1,100 @@
+[gd_scene load_steps=12 format=3 uid="uid://basic_bot_scene"]
+
+[ext_resource type="Script" path="res://scripts/enemies/basic_bot.gd" id="1_bot"]
+[ext_resource type="Script" path="res://scripts/systems/health.gd" id="2_health"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="mat_torso"]
+albedo_color = Color(0.95, 0.45, 0.1, 1)
+roughness = 0.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_torso"]
+size = Vector3(0.5, 0.8, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="mat_dark_head"]
+albedo_color = Color(0.18, 0.18, 0.22, 1)
+roughness = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_head"]
+size = Vector3(0.35, 0.35, 0.35)
+
+[sub_resource type="StandardMaterial3D" id="mat_cyan_visor"]
+albedo_color = Color(0.2, 0.9, 1, 1)
+emission_enabled = true
+emission = Color(0.2, 0.9, 1, 1)
+emission_energy_multiplier = 3.0
+shading_mode = 0
+
+[sub_resource type="BoxMesh" id="BoxMesh_visor"]
+size = Vector3(0.28, 0.1, 0.08)
+
+[sub_resource type="BoxMesh" id="BoxMesh_weapon"]
+size = Vector3(0.08, 0.1, 0.35)
+
+[sub_resource type="SphereMesh" id="SphereMesh_flash"]
+radius = 0.04
+height = 0.08
+
+[sub_resource type="StandardMaterial3D" id="mat_flash"]
+albedo_color = Color(1, 0.9, 0.2, 1)
+shading_mode = 0
+
+[node name="BasicBot" type="CharacterBody3D"]
+script = ExtResource("1_bot")
+
+[node name="Health" type="Node" parent="."]
+script = ExtResource("2_health")
+max_health = 100.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_1")
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
+path_desired_distance = 1.0
+target_desired_distance = 1.5
+path_max_distance = 3.0
+
+[node name="Visuals" type="Node3D" parent="."]
+
+[node name="Torso" type="MeshInstance3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+mesh = SubResource("BoxMesh_torso")
+material_override = SubResource("mat_torso")
+
+[node name="Head" type="MeshInstance3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0)
+mesh = SubResource("BoxMesh_head")
+material_override = SubResource("mat_dark_head")
+
+[node name="Visor" type="MeshInstance3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.48, -0.16)
+mesh = SubResource("BoxMesh_visor")
+material_override = SubResource("mat_cyan_visor")
+
+[node name="WeaponMesh" type="Node3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25, 0.9, -0.2)
+
+[node name="GunBody" type="MeshInstance3D" parent="Visuals/WeaponMesh"]
+mesh = SubResource("BoxMesh_weapon")
+material_override = SubResource("mat_dark_head")
+
+[node name="Muzzle" type="Node3D" parent="Visuals/WeaponMesh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -0.22)
+
+[node name="Flash" type="MeshInstance3D" parent="Visuals/WeaponMesh/Muzzle"]
+visible = false
+mesh = SubResource("SphereMesh_flash")
+material_override = SubResource("mat_flash")
+
+[node name="HPLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 0)
+billboard = 2
+no_depth_test = true
+modulate = Color(1, 0.4, 0.4, 1)
+text = "100 / 100 HP"
+font_size = 18
+pixel_size = 0.003

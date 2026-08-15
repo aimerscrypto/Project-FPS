@@ -31,9 +31,6 @@ const WeaponDataScript = preload("res://scripts/weapons/weapon_data.gd")
 # Muzzle flash Node3D — toggled visible for one frame on fire.
 @onready var _muzzle_flash  : Node3D       = $WeaponMesh/MuzzleFlash
 
-# Debug: temporary Label3D showing ammo (hidden in production).
-@onready var _ammo_label    : Label3D      = $AmmoLabel
-
 # Reference to the Player and Camera3D so recoil can be applied cleanly.
 var _player : CharacterBody3D = null
 var _camera : Camera3D        = null
@@ -74,7 +71,6 @@ func _ready() -> void:
 	_raycast.target_position = Vector3(0.0, 0.0, -data.range_meters)
 	if is_instance_valid(_muzzle_flash):
 		_muzzle_flash.visible = false
-	_update_ammo_label()
 
 
 ## Called by the player controller to link the player body.
@@ -155,7 +151,6 @@ func _fire() -> void:
 		_muzzle_flash.visible = true
 		_muzzle_timer = MUZZLE_FLASH_DURATION
 
-	_update_ammo_label()
 	print("[Weapon] Fired. Ammo: %d / %d" % [_current_ammo, _reserve_ammo])
 
 
@@ -259,7 +254,6 @@ func _finish_reload() -> void:
 	_current_ammo += taken
 	_reserve_ammo -= taken
 	_state = WeaponState.READY
-	_update_ammo_label()
 	print("[Weapon] Reload complete. Ammo: %d / %d" % [_current_ammo, _reserve_ammo])
 
 
@@ -323,10 +317,6 @@ func _tick_spray_tracker(delta: float) -> void:
 # =============================================================================
 # HELPERS
 # =============================================================================
-func _update_ammo_label() -> void:
-	if is_instance_valid(_ammo_label):
-		_ammo_label.text = "%d / %d" % [_current_ammo, _reserve_ammo]
-
 
 ## Returns current ammo info for external display (future HUD).
 func get_ammo_info() -> Dictionary:
