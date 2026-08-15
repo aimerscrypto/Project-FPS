@@ -305,27 +305,27 @@ var _current_eye_height : float = EYE_HEIGHT_STAND
 
 
 func _handle_capsule_lerp(delta: float) -> void:
-	var target_height := HEIGHT_STAND
-	var target_eye    := EYE_HEIGHT_STAND
+	var target_height : float = HEIGHT_STAND
+	var target_eye    : float = EYE_HEIGHT_STAND
 
 	if _state == MoveState.CROUCH or _state == MoveState.SLIDE:
 		target_height = HEIGHT_CROUCH
 		target_eye    = EYE_HEIGHT_CROUCH
 
 	# --- Capsule height ---
-	var height_diff := target_height - _current_height
+	var height_diff : float = target_height - _current_height
 	if abs(height_diff) > 0.001:
 		# If growing (standing up), check for ceiling first.
 		if height_diff > 0.0 and _is_ceiling_blocking():
 			# Blocked — also pin camera to crouch height so it doesn't drift.
 			target_eye = EYE_HEIGHT_CROUCH
 		else:
-			var new_height := lerp(_current_height, target_height, HEIGHT_LERP_SPEED * delta)
+			var new_height : float = lerpf(_current_height, target_height, HEIGHT_LERP_SPEED * delta)
 			# Snap to target when close enough to avoid permanent asymptote.
 			if abs(new_height - target_height) < 0.002:
 				new_height = target_height
 
-			var delta_h := new_height - _current_height
+			var delta_h : float = new_height - _current_height
 			_current_height = new_height
 
 			# Resize the capsule shape in place.
@@ -338,7 +338,7 @@ func _handle_capsule_lerp(delta: float) -> void:
 			global_position.y += delta_h * 0.5
 
 	# --- Camera eye height (always lerped, independent of capsule) ---
-	_current_eye_height = lerp(_current_eye_height, target_eye, HEIGHT_LERP_SPEED * delta)
+	_current_eye_height = lerpf(_current_eye_height, target_eye, HEIGHT_LERP_SPEED * delta)
 	if abs(_current_eye_height - target_eye) < 0.002:
 		_current_eye_height = target_eye
 	# Camera mount sits at eye height above the body's current origin.
@@ -353,9 +353,9 @@ func _is_ceiling_blocking() -> bool:
 	# height the top of the standing capsule would reach.
 	var space  := get_world_3d().direct_space_state
 	# Current capsule bottom in world space:
-	var feet_y := global_position.y - (_current_height * 0.5)
+	var feet_y : float = global_position.y - (_current_height * 0.5)
 	# Where the top of the standing capsule would be:
-	var top_y  := feet_y + HEIGHT_STAND
+	var top_y  : float = feet_y + HEIGHT_STAND
 	var origin := global_position
 	var target := Vector3(origin.x, top_y + 0.05, origin.z)
 	var query  := PhysicsRayQueryParameters3D.create(origin, target, collision_mask)
