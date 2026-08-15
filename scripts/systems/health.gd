@@ -74,6 +74,13 @@ func die(killer: Node = null) -> void:
 	if killer and killer.has_method("record_kill"):
 		killer.record_kill(entity_name)
 
+	# Notify MatchManager if present
+	var tree := get_tree()
+	if tree:
+		var match_mgr = tree.get_first_node_in_group("match_manager")
+		if match_mgr and match_mgr.has_method("record_kill"):
+			match_mgr.record_kill(killer, get_parent())
+
 	died.emit(killer)
 
 

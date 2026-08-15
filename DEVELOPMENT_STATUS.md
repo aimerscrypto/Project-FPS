@@ -1,7 +1,7 @@
 # Project FPS — Development Status
 
 **Last Updated:** 2026-08-15  
-**Current Milestone:** Milestone 4 — Basic Bot & Combat Feedback Pass (COMPLETE & Runtime Verified)
+**Current Milestone:** Milestone 5 — Free For All Foundation (COMPLETE & Runtime Verified)
 
 ---
 
@@ -10,20 +10,16 @@
 - **Milestone 1 (Movement)** — COMPLETE and playtested.
 - **Milestone 2 (First Weapon)** — COMPLETE and playtested.
 - **Milestone 3 (Combat Loop)** — COMPLETE and playtested.
-- **Milestone 4 (Basic Bot):** COMPLETE & RUNTIME VERIFIED:
-  - Removed all obsolete static dummy targets from `scenes/maps/test_arena.tscn`.
-  - `BasicBot` character with `NavigationAgent3D` + robust direct-chase fallback with tangent obstacle deflection.
-  - Precise Line-of-Sight raycast targeting player's torso center.
-  - Finite State Machine (`IDLE`, `SEARCH`, `CHASE`, `ATTACK`, `DEAD`) with 3D State Label (`$StateLabel`) and clean console transition logging.
-  - Hitscan shooting (8 damage/shot, 5 rounds/sec, 15-round magazine, 2.0s reload) with configurable spread ($3^\circ$) and reaction delay ($0.35$s).
-  - Health component integration with hit flash, death state, collision disabling, and 2.5s respawn cycle.
-  - Bot holds fire and returns to `SEARCH` state when target dies.
-- **Combat Feedback Pass (Usability & Readability):** COMPLETE & RUNTIME VERIFIED:
-  - **Player Health Display:** Minimal bottom-left 2D HUD (`CombatHUD`) displaying live HP with dynamic white/amber/red color scaling.
-  - **Damage Screen Flash / Vignette:** Immediate red screen flash on damage fading smoothly over 0.3s, retriggerable on rapid hits.
-  - **Camera Hit Reaction:** Subtle camera flinch (pitch/yaw/roll) layered safely with mouse look and weapon recoil without competing overwrites.
-  - **Death Presentation:** Fullscreen dark death overlay with "YOU DIED", killer attribution ("Killed by BasicBot"), and live countdown ("Respawning in 2.5s...").
-  - **Respawn Restoration:** Restores 100 HP, resets camera offsets, hides death overlay, clears damage flash, recaptures mouse, and re-enables inputs.
+- **Milestone 4 (Basic Bot & Combat Feedback Pass)** — COMPLETE & RUNTIME VERIFIED.
+- **Milestone 5 (Free For All Foundation):** COMPLETE & RUNTIME VERIFIED:
+  - **Combatant Abstraction:** Unified `combatants` group interface implemented across `PlayerController` and `BasicBot` (`combatant_name`, `kills`, `deaths`, `is_alive()`, `get_target_position()`, `take_damage()`).
+  - **Dynamic Multi-Targeting AI:** BasicBot dynamically queries all active combatants, prioritising Line of Sight, valid range ($\le 25$m), and nearest distance. Bots engage both the Player and other Bots and immediately retarget upon target elimination.
+  - **Bot-to-Bot Combat:** Complete hitscan damage, health reduction, death state triggering, and killer credit functioning seamlessly across Player $\leftrightarrow$ Bot and Bot $\leftrightarrow$ Bot.
+  - **MatchManager Foundation:** Modular match controller managing match lifecycle (`WAITING`, `PLAYING`, `ENDED`), countdown timer (5:00 / 300s), kill limit (25 kills), scoreboard tracking (kills, deaths, score), and win-condition determination.
+  - **Dynamic Safe Spawn System:** 9 reusable arena spawn points (`SpawnPoint`) distributed strategically across the arena; `MatchManager.get_spawn_point()` dynamically evaluates and picks the spawn point maximizing distance from alive enemies.
+  - **8-Combatant Arena Configuration:** `scenes/maps/test_arena.tscn` configured with 1 Human Player + 7 `BasicBot` instances (`Bot 1` through `Bot 7`) and active `MatchManager`.
+  - **Non-Spamming Event Logging:** Structured console logging for match lifecycle (`[MATCH]`, `[KILL]`, `[SCORE]`, `[DEATH]`, `[TARGET]`, `[RESPAWN]`, `[WINNER]`).
+  - **Automated Verification:** 32/32 headless integration tests passing (`scripts/systems/test_ffa_foundation.gd`) and verified in continuous live FFA simulation (`scripts/systems/test_ffa_sim.gd`).
 
 ---
 
@@ -45,32 +41,37 @@ project-fps/
 │   └── models/ animations/ audio/ materials/ textures/ vfx/
 ├── scenes/
 │   ├── player/
-│   │   └── player.tscn                       [M1-M4: Health, CrosshairHUD, CombatHUD]
+│   │   └── player.tscn                       [M1-M5: Health, CrosshairHUD, CombatHUD, Combatant]
 │   ├── weapons/
 │   │   ├── weapon_base.tscn                  [M2]
 │   │   └── assault_rifle.tscn                [M2]
 │   ├── enemies/
-│   │   └── basic_bot.tscn                    [M4: BasicBot with 3D HP & State labels]
+│   │   └── basic_bot.tscn                    [M4-M5: Multi-target Combatant with 3D labels]
 │   ├── ui/
 │   │   ├── crosshair.tscn                    [Phase B: 2D CanvasLayer crosshair]
 │   │   └── combat_hud.tscn                   [Combat Feedback: HP display, damage flash, death overlay]
 │   └── maps/
-│       └── test_arena.tscn                   [M4: Graybox arena with Bot & NavRegion]
+│       └── test_arena.tscn                   [M5: 8-Combatant Arena with 9 SpawnPoints & MatchManager]
 ├── scripts/
 │   ├── player/
-│   │   └── player_controller.gd              [M1-M4: Movement, Recoil, Health, CombatHUD, Camera kick, Respawn]
+│   │   └── player_controller.gd              [M1-M5: Movement, Recoil, Health, Combatant, Dynamic Spawns]
 │   ├── weapons/
 │   │   ├── weapon_data.gd                    [M2]
 │   │   └── weapon_base.gd                    [M2]
 │   ├── enemies/
-│   │   └── basic_bot.gd                      [M4: Bot AI controller]
+│   │   └── basic_bot.gd                      [M4-M5: FFA Multi-Target Bot AI controller]
+│   ├── gameplay/
+│   │   └── match_manager.gd                  [M5: FFA Match lifecycle, Timer, Scores, Safe Spawns]
 │   ├── ui/
 │   │   └── combat_hud.gd                     [Combat Feedback: 2D HUD controller]
 │   ├── maps/
-│   │   └── test_arena.gd                     [M4: NavMesh runtime baker]
+│   │   ├── test_arena.gd                     [M4: NavMesh runtime baker]
+│   │   └── spawn_point.gd                    [M5: Reusable 3D Arena Spawn Point]
 │   └── systems/
-│       ├── health.gd                         [M3: Health component with signals & respawn]
-│       └── damage_info.gd                    [M3: Damage payload data container]
+│       ├── health.gd                         [M3-M5: Health component with MatchManager integration]
+│       ├── damage_info.gd                    [M3: Damage payload data container]
+│       ├── test_ffa_foundation.gd            [M5: Automated FFA unit & integration test suite]
+│       └── test_ffa_sim.gd                   [M5: Live FFA multi-combatant simulation test]
 └── data/
     ├── weapons/
     │   └── assault_rifle.tres                [M2]
@@ -83,69 +84,83 @@ project-fps/
 
 | System | File | Status |
 |---|---|---|
-| PlayerController | `scripts/player/player_controller.gd` | Complete (Movement, Recoil absorption, Camera flinch, Health integration, Respawn) |
+| PlayerController | `scripts/player/player_controller.gd` | Complete (Movement, Recoil, Camera flinch, Health, Combatant, Dynamic Respawn) |
 | Crosshair HUD | `scenes/ui/crosshair.tscn` | Complete (2D CanvasLayer, 4 centered ticks, fixed screen-center) |
 | Combat HUD | `scenes/ui/combat_hud.tscn` & `scripts/ui/combat_hud.gd` | Complete (Bottom-left HP display, Damage screen flash, YOU DIED overlay with countdown) |
 | WeaponData (Resource) | `scripts/weapons/weapon_data.gd` | Complete |
-| WeaponBase | `scripts/weapons/weapon_base.gd` | Complete (Hitscan, Damage dispatch, Recoil spray, Debug label removed) |
-| Health Component | `scripts/systems/health.gd` | Complete (damage_received, healed, died, respawned signals) |
+| WeaponBase | `scripts/weapons/weapon_base.gd` | Complete (Hitscan, Damage dispatch, Recoil spray) |
+| Health Component | `scripts/systems/health.gd` | Complete (damage_received, healed, died, respawned signals, MatchManager dispatch) |
 | DamageInfo Class | `scripts/systems/damage_info.gd` | Complete |
-| BasicBot AI | `scripts/enemies/basic_bot.gd` | Complete (FSM, NavAgent3D + Direct chase, LOS raycast, Aim spread, Hitscan fire, 2.5s respawn, 3D State/HP labels) |
-| BasicBot Scene | `scenes/enemies/basic_bot.tscn` | Complete (Stylized low-poly amber/cyan mesh, Capsule col, 3D HP & State Labels) |
+| MatchManager | `scripts/gameplay/match_manager.gd` | Complete (FSM States, 5:00 Timer, 25 Kill Limit, Scoreboard, Safe Spawning, Winner check) |
+| SpawnPoint | `scripts/maps/spawn_point.gd` | Complete (Reusable 3D Spawn transform in group `spawn_points`) |
+| BasicBot AI | `scripts/enemies/basic_bot.gd` | Complete (FFA Multi-target FSM, LOS check, Hitscan fire, Dynamic Retargeting & Safe Respawn) |
+| BasicBot Scene | `scenes/enemies/basic_bot.tscn` | Complete (Stylized low-poly mesh, 3D HP/State Labels, in `combatants` group) |
 | AssaultRifle | `scenes/weapons/assault_rifle.tscn` | Complete |
 | AssaultRifle Data | `data/weapons/assault_rifle.tres` | Complete |
-| Test Arena | `scenes/maps/test_arena.tscn` | Complete (Player at South, Bot at North, NavRegion, tactical cover blocks) |
+| Test Arena | `scenes/maps/test_arena.tscn` | Complete (1 Player + 7 Bots, 9 SpawnPoints, MatchManager, NavRegion) |
 | Test Arena Script | `scripts/maps/test_arena.gd` | Complete (NavMesh runtime baker) |
+| FFA Test Suite | `scripts/systems/test_ffa_foundation.gd` | Complete (32/32 automated tests passed) |
 
 ---
 
-## Combat & Feedback Flow
+## FFA Combat Loop & Event Architecture
 
 ```
 +-----------------------------------------------------------------------------------+
-|                                COMBAT GAMEPLAY LOOP                               |
+|                           FREE FOR ALL MATCH ARCHITECTURE                         |
 +-----------------------------------------------------------------------------------+
 
-     [PLAYER]                                              [BASIC BOT]
-  * Fixed 2D Crosshair                                  * Finite State Machine (SEARCH/CHASE/ATTACK/DEAD)
-  * CombatHUD (HP 100, Flash, Death UI)                 * NavAgent3D + Direct Fallback with Wall Deflection
-  * Layered Camera (Mouse + Recoil + Flinch)            * Torso-level Line of Sight Raycast Check
-        │                                                     │
-        │ [Player fires AR]                                   │ [Bot spots Player within 25m]
-        ▼                                                     ▼
-  DamageInfo payload                                    State -> CHASE / ATTACK
-  (amount: 25, attacker: Player)                        (aims with spread + reaction delay)
-        │                                                     │
-        ▼ (take_damage)                                       ▼ (fires hitscan)
-  Bot Health reduced (-25)                              DamageInfo payload
-  Bot flashes yellow & updates 3D HP                    (amount: 8, attacker: Bot)
-        │                                                     │
-        ▼ (if Bot HP <= 0)                                    ▼ (take_damage)
-  Bot enters DEAD state                                 Player Health reduced (-8)
-  Player.record_kill("BasicBot")                        CombatHUD triggers Red Flash + updates HP label
-  Bot respawns at origin after 2.5s                     Camera applies subtle hit reaction flinch
-                                                              │
-                                                              ▼ (if Player HP <= 0)
-                                                        Player enters DEAD state
-                                                        CombatHUD displays "YOU DIED" + Countdown
-                                                        Bot transitions to SEARCH & holds fire
-                                                        Player respawns after 2.5s (HP = 100, HUD restored)
+                          +----------------------+
+                          |     MatchManager     |
+                          |  - State: PLAYING    |
+                          |  - Timer: 300.0s     |
+                          |  - Kill Limit: 25    |
+                          +----------+-----------+
+                                     │
+           ┌─────────────────────────┼─────────────────────────┐
+           ▼                         ▼                         ▼
+    [1 Human Player]           [BasicBot 1..7]          [9 Spawn Points]
+   (Group: combatants)       (Group: combatants)      (Group: spawn_points)
+           │                         │                         │
+           │ [Hitscan AR]            │ [Multi-Target AI]       │
+           │                         │ - Evaluates Candidates  │
+           │                         │ - Line of Sight Raycast │
+           │                         │ - Targets Player/Bots   │
+           │                         │                         │
+           ▼                         ▼                         │
+   DamageInfo payload        DamageInfo payload                │
+   (Attacker: Player)        (Attacker: Bot X)                 │
+           │                         │                         │
+           └────────────┬────────────┘                         │
+                        ▼                                      │
+               Target.take_damage()                            │
+                        │                                      │
+                        ▼ (if target HP <= 0)                  │
+               Target enters DEAD state                        │
+                        │                                      │
+                        ▼                                      │
+        MatchManager.record_kill(Killer, Victim)               │
+        - Killer Score += 1, Victim Deaths += 1                │
+        - If Score >= 25 -> MatchManager.end_match()           │
+                        │                                      │
+                        ▼ (after 2.5s respawn delay)           │
+        Safe Spawn Selection ──────────────────────────────────┘
+        - MatchManager.get_spawn_point() picks spawn point
+          maximizing distance from alive enemies
+        - Target.respawn() -> Restores 100 HP, resets FSM
 ```
 
 ---
 
-## Playtest Checklist (Milestone 4 + Combat Feedback)
+## Playtest Checklist (Milestone 5 — FFA Foundation)
 
-- [x] All 3 old static dummy targets removed from `test_arena.tscn`.
-- [x] 2D white 4-line crosshair appears fixed in the center of the screen.
-- [x] `BasicBot` spawns with 3D HP label and 3D State label (`SEARCH`, `CHASE`, `ATTACK`, `DEAD`).
-- [x] Bot moves toward player, navigates around cover blocks, aims, and shoots.
-- [x] Bottom-left 2D HUD shows current player health (e.g. `100 HP`).
-- [x] Taking damage triggers an immediate red damage screen flash fading smoothly over 0.3s.
-- [x] Taking damage triggers a subtle camera flinch that does not interfere with mouse look or weapon recoil.
-- [x] Health HUD updates dynamically (`92 HP`, `84 HP`...) and shifts color (White $\to$ Amber $\to$ Red).
-- [x] Upon reaching 0 HP, player enters explicit `is_dead` state:
-  - Input, movement, and weapon firing are stopped.
-  - Fullscreen dark death overlay appears with "YOU DIED", "Killed by BasicBot", and live countdown.
-  - Bot stops firing and returns to `SEARCH` state.
-- [x] After 2.5s respawn timer, player respawns at spawn point with 100 HP, death overlay hides, damage flash clears, camera resets, and full gameplay controls resume.
+- [x] **Test A — 8 Active Combatants:** 1 Human Player + 7 BasicBots active in the arena.
+- [x] **Test B — Dynamic Multi-Target Selection:** Bots acquire different targets across the arena (both player and other bots).
+- [x] **Test C — Bot-to-Bot Combat:** Bots deal hitscan damage to other bots, reducing HP and eliminating them.
+- [x] **Test D — Player Kills Bot:** Player eliminates bot $\to$ kill credited to Player $\to$ MatchManager score increments (+1).
+- [x] **Test E — Bot Kills Player:** Bot eliminates Player $\to$ CombatHUD shows killer name $\to$ Player respawns.
+- [x] **Test F — Respawn Flow:** Dead combatants respawn after 2.5s at a safe spawn point with 100 HP, collision restored, and state reset to `SEARCH`.
+- [x] **Test G — Dynamic Target Switching:** When a bot's current target dies, it immediately retargets another alive combatant.
+- [x] **Test H — Match Timer:** Internal timer counts down from 300s (5:00) and cleanly ends match upon reaching 0s.
+- [x] **Test I — Kill Limit Win Condition:** Reaching kill limit (25 kills) immediately transitions match to `ENDED` and declares winner.
+- [x] **Structured Event Logging:** Verified non-spamming logs for `[MATCH]`, `[KILL]`, `[SCORE]`, `[DEATH]`, `[TARGET]`, `[RESPAWN]`, and `[WINNER]`.

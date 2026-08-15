@@ -97,6 +97,8 @@ var _jump_consumed  : bool = false
 # =============================================================================
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	add_to_group("combatants")
+	add_to_group("player")
 	# Initialise capsule collision shape to standing height.
 	# CollisionShape3D stays at local origin (0,0,0) — never repositioned.
 	var shape := _collision.shape as CapsuleShape3D
@@ -132,15 +134,31 @@ func apply_recoil(v_kick: float, h_kick: float, recovery_rate: float) -> void:
 
 
 # =============================================================================
-# COMBAT, DAMAGE & KILL TRACKING
+# COMBATANT INTERFACE, DAMAGE & SCORE TRACKING
 # =============================================================================
-var kills : int = 0
+@export var combatant_name : String = "Player"
+var kills  : int = 0
+var deaths : int = 0
+
+
+## Returns true if the player is currently alive.
+func is_alive() -> bool:
+	return not _is_dead
+
+
+## Returns target position for aim and LOS checks (torso center).
+func get_target_position() -> Vector3:
+	return global_position + Vector3(0.0, 0.1, 0.0)
+
 
 ## Called when player eliminates a target
 func record_kill(target_name: String) -> void:
 	kills += 1
-	print("[KILL] Player eliminated %s" % target_name)
-	print("[KILLS] Player: %d" % kills)
+
+
+## Called when player is eliminated
+func record_death(_killer_name: String) -> void:
+	deaths += 1
 
 
 ## Damageable interface entrypoint
@@ -176,6 +194,7 @@ func _on_died(killer: Node) -> void:
 	if _is_dead:
 		return
 	_is_dead = true
+	deaths += 1
 	velocity = Vector3.ZERO
 	_damage_kick_pitch = 0.0
 	_damage_kick_yaw = 0.0
@@ -186,7 +205,7 @@ func _on_died(killer: Node) -> void:
 	if _combat_hud:
 		_combat_hud.show_death(killer, 2.5)
 
-	var killer_name : String = str(killer.name) if killer else "World"
+	var killer_name : String = str(killer.get("combatant_name")) if (killer and killer.get("combatant_name")) else (str(killer.name) if killer else "World")
 	print("[PLAYER DEATH] Player killed by %s" % killer_name)
 
 	# Prototype respawn after 2.5 seconds
@@ -201,7 +220,20 @@ func _do_respawn() -> void:
 
 func _on_respawned() -> void:
 	_is_dead = false
-	global_position = _spawn_position
+
+	# Select dynamic spawn from MatchManager if available
+	var tree := get_tree()
+	var spawn_pos := _spawn_position
+	var spawn_yaw := 0.0
+	if tree:
+		var match_mgr = tree.get_first_node_in_group("match_manager")
+		if match_mgr and match_mgr.has_method("get_spawn_point"):
+			var trans : Transform3D = match_mgr.get_spawn_point(self)
+			spawn_pos = trans.origin
+			spawn_yaw = trans.basis.get_euler().y
+
+	global_position = spawn_pos
+	rotation.y = spawn_yaw
 	velocity = Vector3.ZERO
 	_mouse_pitch = 0.0
 	_recoil_pitch = 0.0
@@ -217,7 +249,8 @@ func _on_respawned() -> void:
 	if _combat_hud:
 		_combat_hud.hide_death()
 
-	print("[PLAYER RESPAWN] Player respawned. HP: %.0f/%.0f" % [
+	print("[RESPAWN] Player respawned at %s. HP: %.0f/%.0f" % [
+		str(global_position.snapped(Vector3(0.1, 0.1, 0.1))),
 		_health.current_health if _health else 100.0,
 		_health.max_health if _health else 100.0
 	])

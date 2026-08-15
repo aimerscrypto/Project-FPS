@@ -1,8 +1,10 @@
-[gd_scene load_steps=13 format=3 uid="uid://ciwtdv253nd7q"]
+[gd_scene load_steps=15 format=3 uid="uid://ciwtdv253nd7q"]
 
 [ext_resource type="Script" path="res://scripts/maps/test_arena.gd" id="1_arena"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
 [ext_resource type="PackedScene" path="res://scenes/enemies/basic_bot.tscn" id="3_bot"]
+[ext_resource type="Script" path="res://scripts/gameplay/match_manager.gd" id="4_match"]
+[ext_resource type="Script" path="res://scripts/maps/spawn_point.gd" id="5_spawn"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
 sky_top_color = Color(0.15, 0.18, 0.28, 1)
@@ -56,11 +58,81 @@ light_color = Color(1, 0.96, 0.88, 1)
 light_energy = 1.2
 shadow_enabled = true
 
-[node name="Player" parent="." instance=ExtResource("2_player")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 12)
+[node name="MatchManager" type="Node" parent="."]
+script = ExtResource("4_match")
+match_length = 300.0
+kill_limit = 25
+auto_start = true
 
-[node name="BasicBot" parent="." instance=ExtResource("3_bot")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -10)
+[node name="Spawns" type="Node3D" parent="."]
+
+[node name="SpawnPoint_South" type="Marker3D" parent="Spawns"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.9, 14)
+script = ExtResource("5_spawn")
+
+[node name="SpawnPoint_North" type="Marker3D" parent="Spawns"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -14)
+script = ExtResource("5_spawn")
+
+[node name="SpawnPoint_East" type="Marker3D" parent="Spawns"]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 14, 0.9, 0)
+script = ExtResource("5_spawn")
+
+[node name="SpawnPoint_West" type="Marker3D" parent="Spawns"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -14, 0.9, 0)
+script = ExtResource("5_spawn")
+
+[node name="SpawnPoint_NE" type="Marker3D" parent="Spawns"]
+transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, 10, 0.9, -10)
+script = ExtResource("5_spawn")
+
+[node name="SpawnPoint_NW" type="Marker3D" parent="Spawns"]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, -10, 0.9, -10)
+script = ExtResource("5_spawn")
+
+[node name="SpawnPoint_SE" type="Marker3D" parent="Spawns"]
+transform = Transform3D(-0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, -0.707107, 10, 0.9, 10)
+script = ExtResource("5_spawn")
+
+[node name="SpawnPoint_SW" type="Marker3D" parent="Spawns"]
+transform = Transform3D(-0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, -0.707107, -10, 0.9, 10)
+script = ExtResource("5_spawn")
+
+[node name="SpawnPoint_Platform" type="Marker3D" parent="Spawns"]
+transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, 10, 3.5, -10)
+script = ExtResource("5_spawn")
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.9, 14)
+combatant_name = "Player"
+
+[node name="BasicBot1" parent="." instance=ExtResource("3_bot")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -14)
+combatant_name = "Bot 1"
+
+[node name="BasicBot2" parent="." instance=ExtResource("3_bot")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 14, 0.9, 0)
+combatant_name = "Bot 2"
+
+[node name="BasicBot3" parent="." instance=ExtResource("3_bot")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -14, 0.9, 0)
+combatant_name = "Bot 3"
+
+[node name="BasicBot4" parent="." instance=ExtResource("3_bot")]
+transform = Transform3D(0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, 0.707107, 10, 0.9, -10)
+combatant_name = "Bot 4"
+
+[node name="BasicBot5" parent="." instance=ExtResource("3_bot")]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, -10, 0.9, -10)
+combatant_name = "Bot 5"
+
+[node name="BasicBot6" parent="." instance=ExtResource("3_bot")]
+transform = Transform3D(-0.707107, 0, -0.707107, 0, 1, 0, 0.707107, 0, -0.707107, 10, 0.9, 10)
+combatant_name = "Bot 6"
+
+[node name="BasicBot7" parent="." instance=ExtResource("3_bot")]
+transform = Transform3D(-0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, -0.707107, -10, 0.9, 10)
+combatant_name = "Bot 7"
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
 navigation_mesh = SubResource("NavigationMesh_arena")
