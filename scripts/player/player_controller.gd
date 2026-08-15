@@ -148,7 +148,7 @@ func take_damage(info: DamageInfo) -> void:
 
 
 func _on_damage_received(info: DamageInfo, current_hp: float, max_hp: float) -> void:
-	var attacker_name : String = info.attacker.name if (info and info.attacker) else "Unknown"
+	var attacker_name : String = str(info.attacker.name) if (info and info.attacker) else "Unknown"
 	print("[PLAYER DAMAGE] Took %.0f damage from %s. HP: %.0f/%.0f" % [
 		info.get_final_damage() if info else 0.0,
 		attacker_name,
@@ -160,7 +160,7 @@ func _on_damage_received(info: DamageInfo, current_hp: float, max_hp: float) -> 
 func _on_died(killer: Node) -> void:
 	_is_dead = true
 	velocity = Vector3.ZERO
-	var killer_name : String = killer.name if killer else "World"
+	var killer_name : String = str(killer.name) if killer else "World"
 	print("[PLAYER DEATH] Player killed by %s" % killer_name)
 
 	# Prototype respawn after 2.5 seconds

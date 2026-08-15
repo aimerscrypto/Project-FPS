@@ -384,7 +384,7 @@ func _on_died(killer: Node) -> void:
 	_visuals.visible = false
 	_hp_label.visible = false
 
-	var killer_name : String = killer.name if killer else "World"
+	var killer_name : String = str(killer.name) if killer else "World"
 	print("[BOT DEATH] Bot killed by %s" % killer_name)
 
 	# Respawn after delay

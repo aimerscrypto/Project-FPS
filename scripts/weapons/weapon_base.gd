@@ -175,7 +175,7 @@ func _do_hitscan() -> void:
 		var hit_point    := _raycast.get_collision_point()
 		var hit_normal   := _raycast.get_collision_normal()
 		var hit_collider := _raycast.get_collider()
-		var hit_name     : String = hit_collider.name if hit_collider else "unknown"
+		var hit_name     : String = str(hit_collider.name) if hit_collider else "unknown"
 
 		print("[HIT] Object: %s | Point: %s | Normal: %s" % [
 			hit_name,

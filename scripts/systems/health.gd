@@ -36,7 +36,7 @@ func take_damage(info: DamageInfo) -> void:
 
 	damage_received.emit(info, current_health, max_health)
 
-	var entity_name : String = get_parent().name if get_parent() else name
+	var entity_name : String = str(get_parent().name) if get_parent() else str(name)
 	print("[DAMAGE] %s took %.0f damage. HP: %.0f/%.0f" % [
 		entity_name,
 		final_damage,
@@ -66,8 +66,8 @@ func die(killer: Node = null) -> void:
 	is_dead = true
 	current_health = 0.0
 
-	var entity_name : String = get_parent().name if get_parent() else name
-	var killer_name : String = killer.name if killer else "World"
+	var entity_name : String = str(get_parent().name) if get_parent() else str(name)
+	var killer_name : String = str(killer.name) if killer else "World"
 	print("[DEATH] %s killed by %s" % [entity_name, killer_name])
 
 	# Notify killer if it supports kill recording
@@ -81,6 +81,6 @@ func die(killer: Node = null) -> void:
 func respawn() -> void:
 	is_dead = false
 	current_health = max_health
-	var entity_name : String = get_parent().name if get_parent() else name
+	var entity_name : String = str(get_parent().name) if get_parent() else str(name)
 	print("[RESPAWN] %s respawned. HP: %.0f/%.0f" % [entity_name, current_health, max_health])
 	respawned.emit()
