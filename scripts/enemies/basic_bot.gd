@@ -544,7 +544,7 @@ func _flash_hit() -> void:
 			_mesh_instances[i].material_override = _orig_materials[i]
 
 
-func _on_died(killer: Node) -> void:
+func _on_died(_killer: Node) -> void:
 	_set_state(State.DEAD)
 	deaths += 1
 	velocity = Vector3.ZERO

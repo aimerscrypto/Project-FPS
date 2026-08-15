@@ -2,17 +2,19 @@ extends Node3D
 
 # =============================================================================
 # Project FPS — TestArena
-# Milestone 4 — Basic Bot Navigation Setup
+# Milestone 6 — Arena Graybox & Tactical Map Pass
 #
-# Bakes the NavigationRegion3D mesh on ready so navigation agents have
-# a fully generated 3D navigation map.
+# Generates and bakes the 3D NavigationMesh at runtime from the arena static
+# colliders, connecting all vertical levels (Ground, Underpass, High Ground Catwalk).
 # =============================================================================
 
 @onready var _nav_region : NavigationRegion3D = $NavigationRegion3D
 
 
 func _ready() -> void:
-	if _nav_region:
-		_nav_region.bake_navigation_mesh(false)
-		var poly_count := _nav_region.navigation_mesh.get_polygon_count() if _nav_region.navigation_mesh else 0
+	if _nav_region and _nav_region.navigation_mesh:
+		var source_data := NavigationMeshSourceGeometryData3D.new()
+		NavigationServer3D.parse_source_geometry_data(_nav_region.navigation_mesh, source_data, _nav_region)
+		NavigationServer3D.bake_from_source_geometry_data(_nav_region.navigation_mesh, source_data)
+		var poly_count := _nav_region.navigation_mesh.get_polygon_count()
 		print("[NAVMESH] Baked NavMesh. Polygons: %d" % poly_count)

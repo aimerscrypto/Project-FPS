@@ -1,7 +1,7 @@
 # Project FPS — Development Status
 
 **Last Updated:** 2026-08-15  
-**Current Milestone:** Milestone 5 — Free For All Foundation (COMPLETE & Runtime Verified)
+**Current Milestone:** Milestone 6 — Arena Graybox & Tactical Map Pass (IN PROGRESS — graybox implemented, awaiting manual playtest)
 
 ---
 
@@ -11,15 +11,18 @@
 - **Milestone 2 (First Weapon)** — COMPLETE and playtested.
 - **Milestone 3 (Combat Loop)** — COMPLETE and playtested.
 - **Milestone 4 (Basic Bot & Combat Feedback Pass)** — COMPLETE & RUNTIME VERIFIED.
-- **Milestone 5 (Free For All Foundation):** COMPLETE & RUNTIME VERIFIED:
-  - **Combatant Abstraction:** Unified `combatants` group interface implemented across `PlayerController` and `BasicBot` (`combatant_name`, `kills`, `deaths`, `is_alive()`, `get_target_position()`, `take_damage()`).
-  - **Dynamic Multi-Targeting AI:** BasicBot dynamically queries all active combatants, prioritising Line of Sight, valid range ($\le 25$m), and nearest distance. Bots engage both the Player and other Bots and immediately retarget upon target elimination.
-  - **Bot-to-Bot Combat:** Complete hitscan damage, health reduction, death state triggering, and killer credit functioning seamlessly across Player $\leftrightarrow$ Bot and Bot $\leftrightarrow$ Bot.
-  - **MatchManager Foundation:** Modular match controller managing match lifecycle (`WAITING`, `PLAYING`, `ENDED`), countdown timer (5:00 / 300s), kill limit (25 kills), scoreboard tracking (kills, deaths, score), and win-condition determination.
-  - **Dynamic Safe Spawn System:** 9 reusable arena spawn points (`SpawnPoint`) distributed strategically across the arena; `MatchManager.get_spawn_point()` dynamically evaluates and picks the spawn point maximizing distance from alive enemies.
-  - **8-Combatant Arena Configuration:** `scenes/maps/test_arena.tscn` configured with 1 Human Player + 7 `BasicBot` instances (`Bot 1` through `Bot 7`) and active `MatchManager`.
-  - **Non-Spamming Event Logging:** Structured console logging for match lifecycle (`[MATCH]`, `[KILL]`, `[SCORE]`, `[DEATH]`, `[TARGET]`, `[RESPAWN]`, `[WINNER]`).
-  - **Automated Verification:** 32/32 headless integration tests passing (`scripts/systems/test_ffa_foundation.gd`) and verified in continuous live FFA simulation (`scripts/systems/test_ffa_sim.gd`).
+- **Milestone 5 (Free For All Foundation)** — COMPLETE & RUNTIME VERIFIED.
+- **Milestone 6 (Arena Graybox & Tactical Map Pass):** IN PROGRESS — graybox implemented, awaiting manual playtest:
+  - **Medium-Sized Tactical Footprint (50m x 50m):** Upgraded from the flat 40m test box to a structured 50m x 50m graybox arena with 5.0m perimeter containment walls, designed for fast 5–15s encounter pacing and dynamic movement (sprint, jump, slide).
+  - **Zone Breakdown & Color Coding:**
+    - **Center (Main Combat Hub):** 20m x 20m arena featuring a full-height 3x3m central monument (`mat_center_monument`), 4 angled waist-high barriers (`mat_cover_waist`), and 2 sightline-blocking pillars.
+    - **Flank Route A (West Pillar Alley):** Semi-enclosed corridor (X: -24 to -12) separated by partition walls with 2 archway connectors into Center; features heavy cover pillars and staggered crates for 5–12m CQC.
+    - **Flank Route B & High Ground (East Catwalk Overlook):** Elevated platform at **Y = 3.5m** (10m x 16m) overlooking Center with waist-high parapet railings. Features **3 distinct attack vectors**: North Ramp (10m, ~19°), South Ramp (10m, ~19°), and Center 2-tier skill-jump crates (Y = 1.2m and 2.4m).
+    - **Lower Route (Subway Underpass Trench):** Recessed corridor at **Y = -2.0m** (8m x 28m) running under the High Ground bridge, providing 100% overhead cover from sniper fire with 3 access ramps (North, South, and Center).
+    - **North & South Plazas:** Tactical spawn staging zones with L-shaped barriers and crates.
+  - **10 Strategic Spawn Points:** Distributed across all sectors (North Plaza, South Plaza, Flank A, High Ground Catwalk, Low Route Underpass, and Center Alcove) with natural LOS obstruction to prevent spawn camping.
+  - **Full 3D NavigationMesh Integration:** Runtime StaticBody3D collision parsing generating 327 active 3D navigation polygons across ground floor, underpass, catwalk, and ramps.
+  - **FFA Simulation Verified:** Verified in automated integration test suites (`test_milestone6_map.gd`, `test_ffa_foundation.gd`, `test_ffa_sim.gd`) with 8 combatants actively fighting, eliminating targets, and safely respawning across all sectors.
 
 ---
 
@@ -51,7 +54,7 @@ project-fps/
 │   │   ├── crosshair.tscn                    [Phase B: 2D CanvasLayer crosshair]
 │   │   └── combat_hud.tscn                   [Combat Feedback: HP display, damage flash, death overlay]
 │   └── maps/
-│       └── test_arena.tscn                   [M5: 8-Combatant Arena with 9 SpawnPoints & MatchManager]
+│       └── test_arena.tscn                   [M6: 50x50 Tactical Graybox Arena with 10 Spawns]
 ├── scripts/
 │   ├── player/
 │   │   └── player_controller.gd              [M1-M5: Movement, Recoil, Health, Combatant, Dynamic Spawns]
@@ -65,13 +68,14 @@ project-fps/
 │   ├── ui/
 │   │   └── combat_hud.gd                     [Combat Feedback: 2D HUD controller]
 │   ├── maps/
-│   │   ├── test_arena.gd                     [M4: NavMesh runtime baker]
+│   │   ├── test_arena.gd                     [M6: 3D NavMesh runtime static collider baker]
 │   │   └── spawn_point.gd                    [M5: Reusable 3D Arena Spawn Point]
 │   └── systems/
 │       ├── health.gd                         [M3-M5: Health component with MatchManager integration]
 │       ├── damage_info.gd                    [M3: Damage payload data container]
 │       ├── test_ffa_foundation.gd            [M5: Automated FFA unit & integration test suite]
-│       └── test_ffa_sim.gd                   [M5: Live FFA multi-combatant simulation test]
+│       ├── test_ffa_sim.gd                   [M5: Live FFA multi-combatant simulation test]
+│       └── test_milestone6_map.gd            [M6: Automated Map & Tactical Pass test suite]
 └── data/
     ├── weapons/
     │   └── assault_rifle.tres                [M2]
@@ -80,87 +84,86 @@ project-fps/
 
 ---
 
-### Implemented Systems
+## Tactical Arena Layout & Sector Breakdown
 
-| System | File | Status |
-|---|---|---|
-| PlayerController | `scripts/player/player_controller.gd` | Complete (Movement, Recoil, Camera flinch, Health, Combatant, Dynamic Respawn) |
-| Crosshair HUD | `scenes/ui/crosshair.tscn` | Complete (2D CanvasLayer, 4 centered ticks, fixed screen-center) |
-| Combat HUD | `scenes/ui/combat_hud.tscn` & `scripts/ui/combat_hud.gd` | Complete (Bottom-left HP display, Damage screen flash, YOU DIED overlay with countdown) |
-| WeaponData (Resource) | `scripts/weapons/weapon_data.gd` | Complete |
-| WeaponBase | `scripts/weapons/weapon_base.gd` | Complete (Hitscan, Damage dispatch, Recoil spray) |
-| Health Component | `scripts/systems/health.gd` | Complete (damage_received, healed, died, respawned signals, MatchManager dispatch) |
-| DamageInfo Class | `scripts/systems/damage_info.gd` | Complete |
-| MatchManager | `scripts/gameplay/match_manager.gd` | Complete (FSM States, 5:00 Timer, 25 Kill Limit, Scoreboard, Safe Spawning, Winner check) |
-| SpawnPoint | `scripts/maps/spawn_point.gd` | Complete (Reusable 3D Spawn transform in group `spawn_points`) |
-| BasicBot AI | `scripts/enemies/basic_bot.gd` | Complete (FFA Multi-target FSM, LOS check, Hitscan fire, Dynamic Retargeting & Safe Respawn) |
-| BasicBot Scene | `scenes/enemies/basic_bot.tscn` | Complete (Stylized low-poly mesh, 3D HP/State Labels, in `combatants` group) |
-| AssaultRifle | `scenes/weapons/assault_rifle.tscn` | Complete |
-| AssaultRifle Data | `data/weapons/assault_rifle.tres` | Complete |
-| Test Arena | `scenes/maps/test_arena.tscn` | Complete (1 Player + 7 Bots, 9 SpawnPoints, MatchManager, NavRegion) |
-| Test Arena Script | `scripts/maps/test_arena.gd` | Complete (NavMesh runtime baker) |
-| FFA Test Suite | `scripts/systems/test_ffa_foundation.gd` | Complete (32/32 automated tests passed) |
+```text
+               [-25, -25]                                [+25, -25]
+                      +-----------------------------------+
+                      |         NORTH SPAWN PLAZA         |
+                      |   [Spawn 1: Flank A / Spawn 2: CTR]
+                      |   [Spawn 3: Flank B North Approach]
++---------------------+----+-------------------------+----+---------------------+
+|                          |                         |                          |
+|      FLANK ROUTE A       |         CENTER          |      FLANK ROUTE B       |
+|    (West / Pillar Alley) |       MAIN ARENA        |  (East / Terrace Overlook|
+|                          |                         |    & High Ground Catwalk)|
+|  - Staggered waist crates| - Central 3x3m Monument |  - Elevated Catwalk      |
+|    (1.1m) & tall pillars | - 4 Diagonal Barriers   |    (Y = 3.5m)            |
+|  - 5-12m SMG/shotgun CQC | - Sprint/slide space    |  - Ramp North & South    |
+|  - Partition wall with   | - Sightline pillars     |  - Skill-jump crates     |
+|    2 archway connectors  | - [Spawn 10: Alcove]    |  - [Spawn 7: Catwalk]    |
+|  - [Spawn 6: West Mid]   |                         |  - [Spawn 8: Underpass]  |
+|                          |                         |                          |
++---------------------+----+------------+------------+----+---------------------+
+|                     |                 |                 |                     |
+|                     |        LOWER ROUTE / TUNNEL       |                     |
+|                     |        (Y = -2.0m Underpass)      |                     |
+|                     |  - Connects North/South & Center  |                     |
+|                     |  - 100% overhead sniper cover     |                     |
+|                     |  - [Spawn 9: Underpass Floor]     |                     |
+|                     +-----------------+-----------------+                     |
+|                                                                               |
+|                     |         SOUTH SPAWN PLAZA         |                     |
+|                     |   [Spawn 4: Flank A / Spawn 5: CTR]
+|                     |   [Spawn 6: Flank B South Approach]
+|                     +-----------------------------------+                     |
+|                                                                               |
++-------------------------------------------------------------------------------+
+               [-25, +25]                                [+25, +25]
+```
+
+### Sightline Design & Engagement Ranges
+- **Short-Range (5–10m):** Flank Route A alleys, Lower Route subway tunnel, Center monument corners.
+- **Medium-Range (10–25m):** North/South Plazas to Center, between Flank A partition archways, across East terrace.
+- **Long-Range (25–35m):** High Ground Catwalk overlooking Center diagonally and North/South ramp approaches (limited by cover pieces to prevent map-wide sniper dominance).
+
+### Verticality & Reachability
+- **High Ground Catwalk (Y = 3.5m):** Provides powerful high-angle sightlines, but is balanced with 3 access routes:
+  1. North Ramp (10.6m length, slope 19.3°)
+  2. South Ramp (10.6m length, slope 19.3°)
+  3. Center Skill-Jump Crates (Step 1 at Y = 1.2m, Step 2 at Y = 2.4m)
+- **Lower Route Trench (Y = -2.0m):** Provides subterranean traversal protected from elevated angles, with North, South, and West entry ramps.
 
 ---
 
-## FFA Combat Loop & Event Architecture
+## 10 Strategic Spawn Points
 
-```
-+-----------------------------------------------------------------------------------+
-|                           FREE FOR ALL MATCH ARCHITECTURE                         |
-+-----------------------------------------------------------------------------------+
-
-                          +----------------------+
-                          |     MatchManager     |
-                          |  - State: PLAYING    |
-                          |  - Timer: 300.0s     |
-                          |  - Kill Limit: 25    |
-                          +----------+-----------+
-                                     │
-           ┌─────────────────────────┼─────────────────────────┐
-           ▼                         ▼                         ▼
-    [1 Human Player]           [BasicBot 1..7]          [9 Spawn Points]
-   (Group: combatants)       (Group: combatants)      (Group: spawn_points)
-           │                         │                         │
-           │ [Hitscan AR]            │ [Multi-Target AI]       │
-           │                         │ - Evaluates Candidates  │
-           │                         │ - Line of Sight Raycast │
-           │                         │ - Targets Player/Bots   │
-           │                         │                         │
-           ▼                         ▼                         │
-   DamageInfo payload        DamageInfo payload                │
-   (Attacker: Player)        (Attacker: Bot X)                 │
-           │                         │                         │
-           └────────────┬────────────┘                         │
-                        ▼                                      │
-               Target.take_damage()                            │
-                        │                                      │
-                        ▼ (if target HP <= 0)                  │
-               Target enters DEAD state                        │
-                        │                                      │
-                        ▼                                      │
-        MatchManager.record_kill(Killer, Victim)               │
-        - Killer Score += 1, Victim Deaths += 1                │
-        - If Score >= 25 -> MatchManager.end_match()           │
-                        │                                      │
-                        ▼ (after 2.5s respawn delay)           │
-        Safe Spawn Selection ──────────────────────────────────┘
-        - MatchManager.get_spawn_point() picks spawn point
-          maximizing distance from alive enemies
-        - Target.respawn() -> Restores 100 HP, resets FSM
-```
+| Spawn Name | Location | Elevation | Description / Strategic Purpose |
+|---|---|---|---|
+| `SpawnPoint_1_NorthA` | `(-18, 0.9, -21)` | Ground (Y=0) | Flank Route A North entrance behind staging cover |
+| `SpawnPoint_2_NorthPlaza` | `(0, 0.9, -22)` | Ground (Y=0) | North Plaza behind L-shaped barricade |
+| `SpawnPoint_3_NorthEast` | `(18, 0.9, -22)` | Ground (Y=0) | Flank Route B North ramp approach |
+| `SpawnPoint_4_SouthA` | `(-18, 0.9, 21)` | Ground (Y=0) | Flank Route A South entrance behind staging cover |
+| `SpawnPoint_5_SouthPlaza` | `(0, 0.9, 22)` | Ground (Y=0) | South Plaza behind L-shaped barricade (Player start) |
+| `SpawnPoint_6_SouthEast` | `(18, 0.9, 22)` | Ground (Y=0) | Flank Route B South ramp approach |
+| `SpawnPoint_7_WestMid` | `(-22, 0.9, 0)` | Ground (Y=0) | Flank Route A mid-pocket behind heavy pillar |
+| `SpawnPoint_8_HighGround` | `(17, 4.4, 0)` | High Ground (Y=3.5) | Center of Catwalk platform facing West |
+| `SpawnPoint_9_LowRoute` | `(9, -1.1, 0)` | Underpass (Y=-2.0) | Subterranean trench floor under Catwalk |
+| `SpawnPoint_10_CenterAlcove` | `(-8, 0.9, 0)` | Ground (Y=0) | Center West alcove shielded behind monument |
 
 ---
 
-## Playtest Checklist (Milestone 5 — FFA Foundation)
+## Playtest & Verification Checklist
 
-- [x] **Test A — 8 Active Combatants:** 1 Human Player + 7 BasicBots active in the arena.
-- [x] **Test B — Dynamic Multi-Target Selection:** Bots acquire different targets across the arena (both player and other bots).
-- [x] **Test C — Bot-to-Bot Combat:** Bots deal hitscan damage to other bots, reducing HP and eliminating them.
-- [x] **Test D — Player Kills Bot:** Player eliminates bot $\to$ kill credited to Player $\to$ MatchManager score increments (+1).
-- [x] **Test E — Bot Kills Player:** Bot eliminates Player $\to$ CombatHUD shows killer name $\to$ Player respawns.
-- [x] **Test F — Respawn Flow:** Dead combatants respawn after 2.5s at a safe spawn point with 100 HP, collision restored, and state reset to `SEARCH`.
-- [x] **Test G — Dynamic Target Switching:** When a bot's current target dies, it immediately retargets another alive combatant.
-- [x] **Test H — Match Timer:** Internal timer counts down from 300s (5:00) and cleanly ends match upon reaching 0s.
-- [x] **Test I — Kill Limit Win Condition:** Reaching kill limit (25 kills) immediately transitions match to `ENDED` and declares winner.
-- [x] **Structured Event Logging:** Verified non-spamming logs for `[MATCH]`, `[KILL]`, `[SCORE]`, `[DEATH]`, `[TARGET]`, `[RESPAWN]`, and `[WINNER]`.
+- [x] **10 Viable Spawn Points:** Verified 10 registered spawn points with proper spatial distribution.
+- [x] **3D Navigation Mesh Runtime Baking:** 327 navigation polygons baked cleanly covering Ground, High Ground Catwalk, Underpass Trench, and all connecting ramps.
+- [x] **Tactical Sectors Implemented:** Center Monument + Barriers, Flank A Corridor + Partitions, High Ground Catwalk + Ramps + Skill Jumps, Lower Route Trench.
+- [x] **FFA Multi-Combatant Simulation (10s & 20s):** Verified 8 combatants actively acquiring targets, fighting, eliminating enemies, and respawning across varied safe spawns.
+- [x] **Regression FFA Test Suite:** 32/32 tests in `test_ffa_foundation.gd` passing with zero failures.
+- [x] **Milestone 6 Test Suite:** 18/18 tests in `test_milestone6_map.gd` passing with zero failures.
+- [ ] **Manual Playtest Tuning:** Full manual playtest by user to evaluate subjective feel of sliding around cover, jump heights, and assault rifle gunplay across sectors.
+
+---
+
+## Known Issues / Tuning Notes
+- Godot 4 logs informational warnings when baking navigation mesh regarding voxel unit precision clamping (`agent_height`, `agent_max_climb`, `agent_radius`), which are expected engine diagnostics and do not impact navigation accuracy (327 valid polygons baked).
