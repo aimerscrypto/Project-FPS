@@ -97,15 +97,15 @@ States: READY, FIRING, RELOADING
 | reload_time | 2.0 sec |
 | spread_degrees | 0.5 |
 | range_meters | 100.0 |
-| recoil_vertical | 0.85 deg/shot |
-| recoil_horizontal | 0.20 deg max random |
-| recoil_recovery | 4.5 deg/sec |
+| recoil_vertical | 1.05 deg/shot |
+| recoil_horizontal | 0.35 deg max step |
+| recoil_recovery | 4.5 deg/sec (pitch) / 2.5 deg/sec (yaw) |
 
 ### How Firing Works
 
 1. PlayerController._process detects Input.is_action_pressed("fire_primary")
 2. Calls weapon.try_fire() each frame (fire_timer prevents rapid-fire)
-3. weapon_base deducts ammo, runs _do_hitscan(), applies recoil impulse via player.apply_recoil(), triggers muzzle flash
+3. weapon_base deducts ammo, runs _do_hitscan(), applies recoil impulse with directional weave tendency via player.apply_recoil(), triggers muzzle flash
 4. RayCast3D (child of weapon root under Camera3D, points forward -Z) reports collision
 5. Hit info printed to debugger, orange sphere spawned at impact point for 2 seconds
 
@@ -119,9 +119,10 @@ States: READY, FIRING, RELOADING
 ### Recoil Implementation
 
 - PlayerController owns both mouse look and recoil integration in _physics_process
-- Shot adds +recoil_vertical to _recoil_pitch and random ±recoil_horizontal to _recoil_yaw
-- Downward mouse input absorbs _recoil_pitch first, allowing intuitive spray compensation without dive on release
-- When not firing, accumulated recoil decays back to rest at recoil_recovery deg/sec
+- Vertical: shot adds +recoil_vertical (1.05°) to _recoil_pitch, recovers at 4.5°/s (net climb ~0.60°/shot, total ~18° over 30 rounds)
+- Horizontal: weapon_base computes directional tendency and scales initial 3-4 shots for burst accuracy, adding organic spray weaving
+- Horizontal recovery is set to 2.5°/s so lateral spray offsets persist across shots rather than vanishing between frames
+- Two-axis mouse absorption: pulling mouse down or steering against horizontal recoil absorbs the active offsets cleanly without camera dip on fire release
 - CameraMount pitch = clamp(_mouse_pitch + _recoil_pitch)
 - Camera3D yaw = _recoil_yaw
 - Hitscan RayCast3D inherits final camera transform frame-accurately

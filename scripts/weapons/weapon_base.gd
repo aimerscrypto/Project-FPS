@@ -51,6 +51,12 @@ var _reload_timer    : float       = 0.0   # countdown to reload completion
 var _muzzle_timer    : float       = 0.0
 const MUZZLE_FLASH_DURATION : float = 0.05  # seconds
 
+# Spray tracking for recoil personality & directional tendency
+var _continuous_shots   : int   = 0
+var _spray_direction    : float = 1.0    # 1.0 (rightward bias) or -1.0 (leftward bias)
+var _time_since_fired   : float = 0.0
+const SPRAY_RESET_DELAY : float = 0.25   # seconds after last shot to reset continuous spray count
+
 
 # =============================================================================
 # SETUP
@@ -88,6 +94,7 @@ func _process(delta: float) -> void:
 	_tick_fire_timer(delta)
 	_tick_reload_timer(delta)
 	_tick_muzzle_flash(delta)
+	_tick_spray_tracker(delta)
 
 
 # =============================================================================
@@ -132,6 +139,7 @@ func _fire() -> void:
 	_state = WeaponState.FIRING
 	_current_ammo -= 1
 	_fire_timer = 1.0 / data.fire_rate
+	_time_since_fired = 0.0
 
 	# Hitscan
 	_do_hitscan()
@@ -236,8 +244,22 @@ func _finish_reload() -> void:
 # =============================================================================
 func _apply_recoil() -> void:
 	if _player and _player.has_method("apply_recoil"):
-		var h_kick : float = randf_range(-data.recoil_horizontal, data.recoil_horizontal)
+		var h_max : float = data.recoil_horizontal
+
+		# First 3-4 shots have reduced horizontal kick for tight initial burst control
+		var h_scale : float = clampf(float(_continuous_shots) / 4.0, 0.35, 1.0)
+
+		# Directional bias + random deviation around that bias
+		var trend_step  : float = _spray_direction * h_max * 0.55
+		var random_step : float = randf_range(-0.45, 0.45) * h_max
+		var h_kick      : float = (trend_step + random_step) * h_scale
+
+		# Reverse directional tendency every 5-7 continuous shots so the spray weaves naturally
+		if _continuous_shots > 0 and _continuous_shots % randi_range(5, 7) == 0:
+			_spray_direction *= -1.0
+
 		_player.apply_recoil(data.recoil_vertical, h_kick, data.recoil_recovery)
+		_continuous_shots += 1
 
 
 # =============================================================================
@@ -265,6 +287,13 @@ func _tick_muzzle_flash(delta: float) -> void:
 		_muzzle_timer -= delta
 		if _muzzle_timer <= 0.0:
 			_muzzle_flash.visible = false
+
+
+func _tick_spray_tracker(delta: float) -> void:
+	_time_since_fired += delta
+	if _time_since_fired > SPRAY_RESET_DELAY and _continuous_shots > 0:
+		_continuous_shots = 0
+		_spray_direction = 1.0 if randf() > 0.5 else -1.0
 
 
 # =============================================================================

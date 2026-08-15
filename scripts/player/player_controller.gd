@@ -73,10 +73,11 @@ var _current_height : float = HEIGHT_STAND
 var _mouse_delta    : Vector2  = Vector2.ZERO
 
 # Mouse look & recoil
-var _mouse_pitch     : float = 0.0   # Baseline pitch from mouse look (degrees)
-var _recoil_pitch    : float = 0.0   # Current upward recoil offset (degrees)
-var _recoil_yaw      : float = 0.0   # Current horizontal recoil offset (degrees)
-var _recoil_recovery : float = 4.5   # Rate at which recoil recovers (degrees/second)
+var _mouse_pitch           : float = 0.0   # Baseline pitch from mouse look (degrees)
+var _recoil_pitch          : float = 0.0   # Current upward recoil offset (degrees)
+var _recoil_yaw            : float = 0.0   # Current horizontal recoil offset (degrees)
+var _recoil_recovery_pitch : float = 4.5   # Rate at which vertical recoil recovers (degrees/second)
+var _recoil_recovery_yaw   : float = 2.5   # Rate at which horizontal recoil recovers (degrees/second)
 
 # Prevent holding jump to auto-jump — require a fresh press
 var _jump_consumed  : bool = false
@@ -111,7 +112,8 @@ func _ready() -> void:
 func apply_recoil(v_kick: float, h_kick: float, recovery_rate: float) -> void:
 	_recoil_pitch += v_kick
 	_recoil_yaw += h_kick
-	_recoil_recovery = recovery_rate
+	_recoil_recovery_pitch = recovery_rate
+	_recoil_recovery_yaw = recovery_rate * 0.55  # Gentle horizontal recovery preserves spray character
 
 
 # =============================================================================
@@ -158,9 +160,21 @@ func _physics_process(delta: float) -> void:
 # MOUSE LOOK & RECOIL
 # =============================================================================
 func _handle_mouse_look(delta: float) -> void:
-	# 1. Horizontal mouse look (yaw) — rotate the whole body so movement stays aligned
+	# 1. Horizontal mouse look (yaw) — rotate the body, absorbing horizontal recoil if counter-steering
 	if _mouse_delta.x != 0.0:
-		rotate_y(-_mouse_delta.x * MOUSE_SENSITIVITY)
+		var yaw_delta : float = rad_to_deg(_mouse_delta.x * MOUSE_SENSITIVITY)
+		# Counter-steering absorbs active recoil yaw first
+		if yaw_delta > 0.0 and _recoil_yaw > 0.0:
+			var absorbed : float = min(yaw_delta, _recoil_yaw)
+			_recoil_yaw -= absorbed
+			yaw_delta -= absorbed
+		elif yaw_delta < 0.0 and _recoil_yaw < 0.0:
+			var absorbed : float = max(yaw_delta, _recoil_yaw)
+			_recoil_yaw -= absorbed
+			yaw_delta -= absorbed
+
+		if yaw_delta != 0.0:
+			rotate_y(-deg_to_rad(yaw_delta))
 
 	# 2. Vertical mouse look (pitch) — modify _mouse_pitch, absorbing active recoil if pulling down
 	if _mouse_delta.y != 0.0:
@@ -181,9 +195,9 @@ func _handle_mouse_look(delta: float) -> void:
 
 	# 3. Smooth recoil recovery over time toward rest (0)
 	if _recoil_pitch != 0.0:
-		_recoil_pitch = move_toward(_recoil_pitch, 0.0, _recoil_recovery * delta)
+		_recoil_pitch = move_toward(_recoil_pitch, 0.0, _recoil_recovery_pitch * delta)
 	if _recoil_yaw != 0.0:
-		_recoil_yaw = move_toward(_recoil_yaw, 0.0, _recoil_recovery * delta)
+		_recoil_yaw = move_toward(_recoil_yaw, 0.0, _recoil_recovery_yaw * delta)
 
 	# 4. Final camera pitch = base mouse pitch + recoil pitch (clamped safely)
 	_camera_mount.rotation_degrees.x = clamp(_mouse_pitch + _recoil_pitch, CAMERA_PITCH_MIN, CAMERA_PITCH_MAX)

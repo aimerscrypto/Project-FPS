@@ -34,6 +34,6 @@ class_name WeaponData
 @export var range_meters   : float = 100.0 # hitscan maximum range
 
 # --- Recoil (applied to camera on each shot) ---
-@export var recoil_vertical   : float = 0.85  # degrees upward kick per shot
-@export var recoil_horizontal : float = 0.20  # max random horizontal degrees per shot
+@export var recoil_vertical   : float = 1.05  # degrees upward kick per shot
+@export var recoil_horizontal : float = 0.35  # max random horizontal degrees per shot
 @export var recoil_recovery   : float = 4.5   # degrees/second recovery toward rest
