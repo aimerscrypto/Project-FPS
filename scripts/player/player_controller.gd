@@ -152,7 +152,7 @@ func get_target_position() -> Vector3:
 
 
 ## Called when player eliminates a target
-func record_kill(target_name: String) -> void:
+func record_kill(_target_name: String) -> void:
 	kills += 1
 
 

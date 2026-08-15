@@ -554,8 +554,6 @@ func _on_died(killer: Node) -> void:
 	_state_label.visible = false
 	_target = null
 
-	var killer_name : String = str(killer.get("combatant_name")) if (killer and killer.get("combatant_name")) else (str(killer.name) if killer else "World")
-
 	var timer := get_tree().create_timer(respawn_delay)
 	timer.timeout.connect(_do_respawn)
 
@@ -595,8 +593,8 @@ func _on_respawned() -> void:
 	print("[RESPAWN] %s respawned at %s. HP: %.0f/%.0f" % [
 		combatant_name,
 		str(global_position.snapped(Vector3(0.1, 0.1, 0.1))),
-		_health.current_health if _health else 100.0,
-		_health.max_health if _health else 100.0
+		_health.current_health if _health else 0.0,
+		_health.max_health if _health else 1000.0
 	])
 
 
