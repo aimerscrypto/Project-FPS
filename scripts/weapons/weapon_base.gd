@@ -26,7 +26,7 @@ extends Node3D
 @onready var _raycast       : RayCast3D    = $RayCast3D
 
 # Muzzle flash Node3D — toggled visible for one frame on fire.
-@onready var _muzzle_flash  : Node3D       = $MuzzleFlash
+@onready var _muzzle_flash  : Node3D       = $WeaponMesh/MuzzleFlash
 
 # Debug: temporary Label3D showing ammo (hidden in production).
 @onready var _ammo_label    : Label3D      = $AmmoLabel
@@ -66,7 +66,8 @@ func _ready() -> void:
 	_reserve_ammo = data.reserve_ammo
 	# RayCast3D length set from weapon data range.
 	_raycast.target_position = Vector3(0.0, 0.0, -data.range_meters)
-	_muzzle_flash.visible = false
+	if is_instance_valid(_muzzle_flash):
+		_muzzle_flash.visible = false
 	_update_ammo_label()
 
 
@@ -138,8 +139,9 @@ func _fire() -> void:
 	_apply_recoil()
 
 	# Muzzle flash
-	_muzzle_flash.visible = true
-	_muzzle_timer = MUZZLE_FLASH_DURATION
+	if is_instance_valid(_muzzle_flash):
+		_muzzle_flash.visible = true
+		_muzzle_timer = MUZZLE_FLASH_DURATION
 
 	_update_ammo_label()
 	print("[Weapon] Fired. Ammo: %d / %d" % [_current_ammo, _reserve_ammo])
@@ -283,7 +285,7 @@ func _tick_reload_timer(delta: float) -> void:
 
 
 func _tick_muzzle_flash(delta: float) -> void:
-	if _muzzle_flash.visible:
+	if is_instance_valid(_muzzle_flash) and _muzzle_flash.visible:
 		_muzzle_timer -= delta
 		if _muzzle_timer <= 0.0:
 			_muzzle_flash.visible = false
