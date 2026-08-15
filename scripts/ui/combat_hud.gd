@@ -13,7 +13,6 @@ class_name CombatHUD
 @onready var _health_label     : Label     = $HealthDisplay/HealthLabel
 @onready var _damage_flash     : ColorRect = $DamageFlash
 @onready var _death_overlay    : Control   = $DeathOverlay
-@onready var _death_title      : Label     = $DeathOverlay/CenterBox/DeathTitle
 @onready var _death_killer     : Label     = $DeathOverlay/CenterBox/KillerLabel
 @onready var _respawn_timer_lbl: Label     = $DeathOverlay/CenterBox/RespawnTimerLabel
 
