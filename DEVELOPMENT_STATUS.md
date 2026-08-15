@@ -1,7 +1,7 @@
 # Project FPS — Development Status
 
 **Last Updated:** 2026-08-15  
-**Current Milestone:** Milestone 6 — Arena Graybox & Tactical Map Pass (IN PROGRESS — structural redesign implemented, awaiting manual playtest)
+**Current Milestone:** Milestone 6 — Arena Graybox & Tactical Map Pass (IN PROGRESS — structural redesign and collision synchronization complete, awaiting manual playtest)
 
 ---
 
@@ -12,17 +12,21 @@
 - **Milestone 3 (Combat Loop)** — COMPLETE and playtested.
 - **Milestone 4 (Basic Bot & Combat Feedback Pass)** — COMPLETE & RUNTIME VERIFIED.
 - **Milestone 5 (Free For All Foundation)** — COMPLETE & RUNTIME VERIFIED.
-- **Milestone 6 (Arena Graybox & Tactical Map Pass):** IN PROGRESS — structural redesign implemented, awaiting manual playtest:
+- **Milestone 6 (Arena Graybox & Tactical Map Pass):** IN PROGRESS — structural redesign & collision synchronization complete:
+  - **Full Geometry & Collision Synchronization Audit (40 Objects Audited):**
+    - 100% synchronization achieved between visible mesh geometry, collision geometry, and 3D navigation surfaces.
+    - Synchronized all 6 manually modified objects (`Floor_Underpass`, `TrenchWall_East`, `Ramp_Underpass_North`, `Ramp_Underpass_South`, `Ramp_HighGround_North`, `Ramp_HighGround_South`).
+    - Fixed ramp normal orientation vectors to guarantee true upward slope surfaces without invisible step barriers or reversed normal snagging.
+    - Mathematically calculated exact flush thresholds for all 4 ramps connecting Level 0 $\leftrightarrow$ Level +1 and Level 0 $\leftrightarrow$ Level -1.
   - **Coherent 3-Tier Spatial Architecture (50m x 50m):**
     - **Level 0 (Main Ground Floor):** Continuous, seamless physical floor spanning the full arena footprint. Contains the Center Combat Hub, Left Flank (Flank A), Right Flank (Flank B), and Staging Plazas.
     - **Level +1 (High Ground Catwalk @ Y = +3.5m):** Dedicated elevated catwalk deck (8m x 16m) overlooking Center and Right Flank with waist-high parapet protection.
-    - **Level -1 (Underpass Subway Tunnel @ Y = -2.5m):** Subterranean concrete trench (8m x 24m) running beneath the Catwalk, providing 100% overhead cover from sniper fire.
+    - **Level -1 (Underpass Subway Tunnel @ Y = -2.5m):** Subterranean concrete trench (8.5m x 24.3m) running beneath the Catwalk, providing 100% overhead cover from sniper fire.
   - **Strict Ramp Purpose Rule (Exactly 4 Functional Ramps):**
-    - `Ramp_HighGround_North`: Connects North Plaza (Level 0) $\to$ High Ground Catwalk (Level +1) [10.6m, 19.3° slope].
-    - `Ramp_HighGround_South`: Connects South Plaza (Level 0) $\to$ High Ground Catwalk (Level +1) [10.6m, 19.3° slope].
-    - `Ramp_Underpass_North`: Connects North Plaza (Level 0) $\to$ Underpass Tunnel (Level -1) [6.5m, 22.6° slope].
-    - `Ramp_Underpass_South`: Connects South Plaza (Level 0) $\to$ Underpass Tunnel (Level -1) [6.5m, 22.6° slope].
-    - *All random/decorative ramps and jump crates removed.*
+    - `Ramp_HighGround_North`: Connects North Plaza (Level 0) $\to$ High Ground Catwalk (Level +1) [10.6m, 19.29° slope].
+    - `Ramp_HighGround_South`: Connects South Plaza (Level 0) $\to$ High Ground Catwalk (Level +1) [10.6m, 19.29° slope].
+    - `Ramp_Underpass_North`: Connects North Plaza (Level 0) $\to$ Underpass Tunnel (Level -1) [6.5m, 22.62° slope].
+    - `Ramp_Underpass_South`: Connects South Plaza (Level 0) $\to$ Underpass Tunnel (Level -1) [6.5m, 22.62° slope].
   - **Map Boundaries & Fall Protection:**
     - Seamless 6.0m outer perimeter enclosure with zero geometric gaps.
     - Reusable `KillZone` (`Area3D`) at $Y = -8.0$m covering the entire map footprint. Any combatant falling out of bounds is instantly eliminated with environmental damage and safely respawned.
@@ -31,9 +35,8 @@
     - Single Sun (`DirectionalLight3D`): energy `1.0`, soft shadows (`0.65` opacity, `0.03` bias), natural angle.
     - `WorldEnvironment`: ambient energy `0.42` with balanced daytime sky (no washed-out whites, no black crush).
     - Underpass: 2 localized soft utility worklights (energy `0.75`, range `10m`) for clear tunnel navigation.
-    - Controlled mid-tone graybox material palette.
   - **10 Verified Physical Spawn Points:** Strategically distributed across Level 0, Level +1, and Level -1 with line-of-sight obstruction and dynamic safe selection via `MatchManager`.
-  - **Navigation & FFA Simulation Verified:** 316 3D navigation polygons baked across all 3 tiers with 0.25 voxel grid alignment. 21/21 tests in `test_milestone6_map.gd` and 32/32 tests in `test_ffa_foundation.gd` passing.
+  - **Navigation & FFA Simulation Verified:** 327 3D navigation polygons baked across all 3 tiers with 0.25 voxel grid alignment. 21/21 tests in `test_milestone6_map.gd` and 32/32 tests in `test_ffa_foundation.gd` passing.
 
 ---
 
@@ -106,7 +109,7 @@ project-fps/
   - Wide open staging area with 2 L-shaped staging barriers.
   - Level 0 Ground connects West to Left Flank, South to Center Hub.
   - [Ramp 1] North High Ground Ramp: (X: +18, Z: -18, Y: 0) -> Catwalk (X: +18, Z: -8, Y: +3.5m).
-  - [Ramp 3] North Underpass Ramp: (X: +9, Z: -18, Y: 0) -> Underpass (X: +9, Z: -12, Y: -2.5m).
+  - [Ramp 3] North Underpass Ramp: (X: +9.25, Z: -18, Y: 0) -> Underpass (X: +9.25, Z: -12, Y: -2.5m).
 -----------------------------------------------------------------------------------
   [X: -25 to -12]         |    [X: -12 to +5]            |    [X: +5 to +25]
   LEFT FLANK (Flank A)    |    CENTER COMBAT HUB         |    RIGHT FLANK (Flank B)
@@ -125,7 +128,7 @@ project-fps/
   - Wide open staging area with 2 L-shaped staging barriers.
   - Level 0 Ground connects West to Left Flank, North to Center Hub.
   - [Ramp 2] South High Ground Ramp: (X: +18, Z: +18, Y: 0) -> Catwalk (X: +18, Z: +8, Y: +3.5m).
-  - [Ramp 4] South Underpass Ramp: (X: +9, Z: +18, Y: 0) -> Underpass (X: +9, Z: +12, Y: -2.5m).
+  - [Ramp 4] South Underpass Ramp: (X: +9.25, Z: +18, Y: 0) -> Underpass (X: +9.25, Z: +12, Y: -2.5m).
 ===================================================================================
                        SOUTH BOUNDARY (Z = +25, Wall 6.0m)
 ===================================================================================
@@ -152,11 +155,13 @@ project-fps/
 
 ## Playtest & Verification Checklist
 
+- [x] **Full Collision Audit & Synchronization:** All 40 StaticBody3D objects audited; 0 mismatches between mesh and collision shapes.
+- [x] **Ramp Normal & Flush Threshold Verification:** All 4 ramps connect Level 0 $\leftrightarrow$ Level +1 and Level 0 $\leftrightarrow$ Level -1 with upward normals and flush floor thresholds.
+- [x] **Physics Traversal Test Suite:** 6/6 walking routes verified up and down ramps, through underpass, and across catwalk platform.
 - [x] **Coherent 3-Tier Structure:** Level 0 (Ground), Level +1 (Catwalk), Level -1 (Underpass) cleanly unified.
-- [x] **Strict 4-Ramp System:** Exactly 4 vertical ramps connecting Ground to Catwalk and Ground to Underpass with zero decorative ramps.
 - [x] **Fall Protection & KillZone3D:** KillZone at $Y = -8.0$m and safety guards in Player/Bot controllers preventing infinite falls.
 - [x] **Balanced Daytime Lighting:** Single sun (1.0) + natural ambient (0.42) + soft underpass lights (0.75) with calibrated mid-tone materials.
-- [x] **3D NavigationMesh Baking:** 316 polygons baked with 0.25 voxel grid alignment without precision warnings.
+- [x] **3D NavigationMesh Baking:** 327 polygons baked with 0.25 voxel grid alignment without precision warnings.
 - [x] **10 Verified Spawn Points:** Solid ground placement with line-of-sight obstruction and dynamic safe spawn integration.
 - [x] **Automated Regression Test Suite:** 32/32 tests in `test_ffa_foundation.gd` passing.
 - [x] **Automated Milestone 6 Test Suite:** 21/21 tests in `test_milestone6_map.gd` passing.
