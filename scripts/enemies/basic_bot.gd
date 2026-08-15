@@ -13,9 +13,6 @@ extends CharacterBody3D
 # - Health component integration with death, damage flash, and respawn
 # =============================================================================
 
-const DamageInfo = preload("res://scripts/systems/damage_info.gd")
-const HealthScript = preload("res://scripts/systems/health.gd")
-
 # -----------------------------------------------------------------------------
 # CONFIGURABLE PARAMETERS (Tune in Inspector)
 # -----------------------------------------------------------------------------

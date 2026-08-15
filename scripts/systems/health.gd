@@ -10,8 +10,6 @@ class_name Health
 # Uses signals for loose coupling with other systems.
 # =============================================================================
 
-const DamageInfo = preload("res://scripts/systems/damage_info.gd")
-
 signal damage_received(damage_info: DamageInfo, current_hp: float, max_hp: float)
 signal healed(amount: float, current_hp: float, max_hp: float)
 signal died(killer: Node)

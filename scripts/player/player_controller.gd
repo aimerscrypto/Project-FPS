@@ -11,10 +11,6 @@ extends CharacterBody3D
 # All tuning constants are grouped here for easy iteration during playtesting.
 # =============================================================================
 
-const DamageInfo = preload("res://scripts/systems/damage_info.gd")
-const HealthScript = preload("res://scripts/systems/health.gd")
-
-
 # -----------------------------------------------------------------------------
 # MOVEMENT CONSTANTS  (tune these during playtesting)
 # -----------------------------------------------------------------------------

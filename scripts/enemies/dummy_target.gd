@@ -7,9 +7,6 @@ extends StaticBody3D
 # Simple static target for testing hitscan damage, death, and respawn.
 # =============================================================================
 
-const DamageInfo = preload("res://scripts/systems/damage_info.gd")
-const HealthScript = preload("res://scripts/systems/health.gd")
-
 @onready var _health    : Health           = $Health
 @onready var _collision : CollisionShape3D = $CollisionShape3D
 @onready var _visuals   : Node3D           = $Visuals
@@ -52,7 +49,7 @@ func take_damage(info: DamageInfo) -> void:
 		_health.take_damage(info)
 
 
-func _on_damage_received(_info: DamageInfo, current_hp: float, max_hp: float) -> void:
+func _on_damage_received(_info: DamageInfo, _current_hp: float, _max_hp: float) -> void:
 	_update_hp_label()
 	_flash_hit()
 
