@@ -21,7 +21,8 @@ data = ExtResource("2_data")
 [node name="WeaponVisual" parent="." instance=ExtResource("3_visual")]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0.2, -0.18, -0.32)
 
-[node name="MuzzleFlash" type="MeshInstance3D" parent="WeaponVisual/MuzzlePoint"]
+[node name="MuzzleFlash" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1875, -0.098, -0.819)
 visible = false
 mesh = SubResource("SphereMesh_flash")
 material_override = SubResource("mat_muzzle")
