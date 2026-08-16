@@ -25,7 +25,7 @@ extends Node3D
 @onready var _raycast       : RayCast3D    = $RayCast3D
 
 # Muzzle flash Node3D — toggled visible for one frame on fire.
-@onready var _muzzle_flash  : Node3D       = $WeaponMesh/MuzzleFlash
+@onready var _muzzle_flash  : Node3D       = find_child("MuzzleFlash", true, false)
 
 # Reference to the Player and Camera3D so recoil can be applied cleanly.
 var _player : CharacterBody3D = null

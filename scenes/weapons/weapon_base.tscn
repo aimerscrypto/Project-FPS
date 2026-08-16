@@ -1,65 +1,9 @@
-[gd_scene load_steps=11 format=3 uid="uid://weapon_base"]
+[gd_scene load_steps=2 format=3 uid="uid://weapon_base"]
 
 [ext_resource type="Script" path="res://scripts/weapons/weapon_base.gd" id="1_script"]
 
-[sub_resource type="BoxMesh" id="BoxMesh_body"]
-size = Vector3(0.06, 0.07, 0.4)
-
-[sub_resource type="BoxMesh" id="BoxMesh_barrel"]
-size = Vector3(0.03, 0.03, 0.25)
-
-[sub_resource type="BoxMesh" id="BoxMesh_stock"]
-size = Vector3(0.05, 0.09, 0.12)
-
-[sub_resource type="BoxMesh" id="BoxMesh_mag"]
-size = Vector3(0.04, 0.12, 0.05)
-
-[sub_resource type="StandardMaterial3D" id="mat_dark"]
-albedo_color = Color(0.15, 0.15, 0.18, 1)
-roughness = 0.8
-metallic = 0.3
-
-[sub_resource type="StandardMaterial3D" id="mat_muzzle"]
-albedo_color = Color(1.0, 0.85, 0.2, 1)
-emission_enabled = true
-emission = Color(1.0, 0.85, 0.2, 1)
-emission_energy_multiplier = 4.0
-shading_mode = 0
-
-[sub_resource type="SphereMesh" id="SphereMesh_flash"]
-radius = 0.035
-height = 0.07
-
 [node name="WeaponBase" type="Node3D"]
 script = ExtResource("1_script")
-
-[node name="WeaponMesh" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15, -0.18, -0.3)
-
-[node name="Body" type="MeshInstance3D" parent="WeaponMesh"]
-mesh = SubResource("BoxMesh_body")
-material_override = SubResource("mat_dark")
-
-[node name="Barrel" type="MeshInstance3D" parent="WeaponMesh"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -0.32)
-mesh = SubResource("BoxMesh_barrel")
-material_override = SubResource("mat_dark")
-
-[node name="Stock" type="MeshInstance3D" parent="WeaponMesh"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.01, 0.24)
-mesh = SubResource("BoxMesh_stock")
-material_override = SubResource("mat_dark")
-
-[node name="Magazine" type="MeshInstance3D" parent="WeaponMesh"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, -0.05)
-mesh = SubResource("BoxMesh_mag")
-material_override = SubResource("mat_dark")
-
-[node name="MuzzleFlash" type="MeshInstance3D" parent="WeaponMesh"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -0.46)
-visible = false
-mesh = SubResource("SphereMesh_flash")
-material_override = SubResource("mat_muzzle")
 
 [node name="RayCast3D" type="RayCast3D" parent="."]
 enabled = true

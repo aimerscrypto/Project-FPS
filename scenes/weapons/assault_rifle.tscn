@@ -1,7 +1,27 @@
-[gd_scene load_steps=2 format=3 uid="uid://assault_rifle"]
+[gd_scene load_steps=6 format=3 uid="uid://assault_rifle"]
 
 [ext_resource type="PackedScene" path="res://scenes/weapons/weapon_base.tscn" id="1_base"]
 [ext_resource type="Resource" path="res://data/weapons/assault_rifle.tres" id="2_data"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/assault_rifle_visual.tscn" id="3_visual"]
+
+[sub_resource type="StandardMaterial3D" id="mat_muzzle"]
+albedo_color = Color(1, 0.85, 0.2, 1)
+emission_enabled = true
+emission = Color(1, 0.85, 0.2, 1)
+emission_energy_multiplier = 4.0
+shading_mode = 0
+
+[sub_resource type="SphereMesh" id="SphereMesh_flash"]
+radius = 0.035
+height = 0.07
 
 [node name="AssaultRifle" instance=ExtResource("1_base")]
 data = ExtResource("2_data")
+
+[node name="WeaponVisual" parent="." instance=ExtResource("3_visual")]
+transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0.2, -0.18, -0.32)
+
+[node name="MuzzleFlash" type="MeshInstance3D" parent="WeaponVisual/MuzzlePoint"]
+visible = false
+mesh = SubResource("SphereMesh_flash")
+material_override = SubResource("mat_muzzle")
