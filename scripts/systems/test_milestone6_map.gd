@@ -176,8 +176,8 @@ func _test_live_combat_simulation(arena: Node) -> void:
 	for c in match_mgr._combatant_stats:
 		start_kills += match_mgr._combatant_stats[c]["kills"]
 
-	print("[SIMULATION] Running 900 physics frames (~15.0s live combat)...")
-	for i in range(900):
+	print("[SIMULATION] Running 1200 physics frames (~20.0s live combat)...")
+	for i in range(1200):
 		arena.get_tree().physics_frame
 		await process_frame
 

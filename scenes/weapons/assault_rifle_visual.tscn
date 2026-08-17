@@ -1,5 +1,7 @@
 [gd_scene load_steps=2 format=3 uid="uid://assault_rifle_visual"]
 
-[ext_resource type="PackedScene" path="res://assets/models/weapons/assault_rifle_clean.glb" id="1_clean_glb"]
+[ext_resource type="PackedScene" uid="uid://b36t172cm3eiv" path="res://assets/models/weapons/assault_rifle_original.glb" id="1_original_glb"]
 
-[node name="WeaponVisual" instance=ExtResource("1_clean_glb")]
+[node name="WeaponVisual" instance=ExtResource("1_original_glb")]
+
+

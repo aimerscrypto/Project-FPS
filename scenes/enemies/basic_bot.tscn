@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/enemies/basic_bot.gd" id="1_bot"]
 [ext_resource type="Script" path="res://scripts/systems/health.gd" id="2_health"]
-[ext_resource type="PackedScene" uid="uid://player_rigged_character" path="res://assets/models/player/player_rigged.scn" id="3_character_model"]
+[ext_resource type="PackedScene" uid="uid://c5gkkrvaidv5o" path="res://assets/models/enemies/tripo_texture_aaa2553e-cfbc-486a-a5d3-69565fd7e00f_meshopt-v1.glb" id="3_character_model"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.4
@@ -42,7 +42,7 @@ path_max_distance = 3.0
 [node name="Visuals" type="Node3D" parent="."]
 
 [node name="VisualCharacter" parent="Visuals" instance=ExtResource("3_character_model")]
-transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, 0)
+transform = Transform3D(-1.8, 0, -1.57361e-07, 0, 1.8, 0, 1.57361e-07, 0, -1.8, 0, 0.9, 0)
 
 [node name="WeaponMesh" type="Node3D" parent="Visuals"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25, 0.9, -0.2)

@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://ddakmwvjxj1t8"
-path="res://.godot/imported/assault_rifle_clean.glb-b25df4a1a868eacc510e4c0ee57dca9d.scn"
+uid="uid://dcppm14yc7kro"
+path="res://.godot/imported/player_rigged.glb-b4f14bc28926e8047e4bdc727be7213a.scn"
 
 [deps]
 
-source_file="res://assets/models/weapons/assault_rifle_clean.glb"
-dest_files=["res://.godot/imported/assault_rifle_clean.glb-b25df4a1a868eacc510e4c0ee57dca9d.scn"]
+source_file="res://assets/models/player/player_rigged.glb"
+dest_files=["res://.godot/imported/player_rigged.glb-b4f14bc28926e8047e4bdc727be7213a.scn"]
 
 [params]
 
