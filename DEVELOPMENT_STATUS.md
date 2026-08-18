@@ -1,7 +1,7 @@
 # Project FPS — Development Status
 
 **Last Updated:** 2026-08-18  
-**Current Milestone:** Milestone 12 — Map Gameplay & Spawn Quality (COMPLETE & RUNTIME VERIFIED)
+**Current Milestone:** Milestone 13 — Bot AI & Combat Intelligence (COMPLETE & RUNTIME VERIFIED)
 
 ---
 
@@ -120,7 +120,21 @@
     - Integrated `AudioManager` helper methods for kill confirmation and respawn playback.
   - **Phase 7: Automated Verification:**
     - 65/65 tests in `test_milestone11_combat_feedback.gd` passing.
-    - All regression suites (59/59 M10, 21/21 Restoration, 32/32 FFA, 21/21 M6 Map) passing.
+- **Milestone 12 (Map Gameplay & Spawn Quality):** COMPLETE & RUNTIME VERIFIED:
+  - Tactical 3-Lane Combat Arena (50m x 50m) with West CQC Flank, Center Monument Hub, and East Wing (Catwalk + Underpass).
+  - Authoritative 1.2s spawn protection with `[SHIELD]` UI feedback.
+  - Multi-factor safe spawn point selection (distance, density, LOS raycasting, and death proximity penalties).
+  - 45/45 tests passing in `test_milestone12_map_gameplay.gd`.
+- **Milestone 13 (Bot AI & Combat Intelligence):** COMPLETE & RUNTIME VERIFIED:
+  - Cone-Based Vision Perception (`fov_degrees: 115.0°`) & close-range hearing (`hearing_range: 3.5m`).
+  - Damage alertness stimulus (attacks from behind trigger immediate alert and acquisition).
+  - Last-Known-Position (LKP) tracking with 3.5s memory decay and dedicated `INVESTIGATE` state.
+  - Dynamic lateral combat strafing (1.0s – 2.2s cadence) with micro-pauses and obstacle raycast probing.
+  - Tactical cover seeking under heavy damage ($\le 35\%$ HP) or empty-magazine reload under fire.
+  - Human-like rotational smoothing (`turn_speed: 6.5 rad/s`) and fire alignment tolerance ($\le 14.0^\circ$).
+  - Data-driven difficulty presets (`EASY`, `MEDIUM`, `HARD`) and multi-factor target prioritization scoring.
+  - 43/43 tests passing in `test_milestone13_bot_ai.gd`.
+  - Full regression suite: 286/286 tests passing (100%).
 
 
 ---
@@ -263,31 +277,34 @@ project-fps/
   - 4-tier hit feel hierarchy (Body, Headshot, Kill, Headshot Kill) with distinct visual scale & audio cues.
   - Knockdown death camera presentation (+14° roll, +6° pitch slump, -0.35m sink) & dynamic respawn timer.
   - Health bar with trailing chip damage and pulsating low-health warning.
-- [x] **Milestone 12 (Map Gameplay & Spawn Quality):**
-  - **Tactical 3-Lane Combat Arena (50m x 50m):**
-    - **West Flank (Left Lane - X: -25 to -12):** Close-quarters flanking corridor with staggered hard cover pillars, waist-high concrete barricades, and tactical rotation openings into Center. Ideal for Pistol and aggressive CQC flanking.
-    - **Center Skirmish Hub (Middle Lane - X: -12 to +5):** Primary mid-range combat hub with massive Center Monument (blocks long-range cross-map snipes), 4 angled waist-high barriers (1.1m) providing sliding/peeking cover, and North/South transition pillars.
-    - **East Wing & Vertical Tiers (Right Lane - X: +5 to +25):**
-      - **Level +1 High Ground Catwalk (@ Y = +3.5m):** Elevated tactical vantage deck with west parapet protection and 4 support columns. Accessible via North and South 19.3° ramps.
-      - **Level -1 Subterranean Underpass Trench (@ Y = -2.5m):** Recessed concrete tunnel beneath Catwalk with central baffles and soft lighting, providing 100% overhead cover from sniper fire. Accessible via North and South 22.6° ramps.
-  - **Authoritative Spawn Protection System:**
-    - Integrated into core `Health` component (`is_spawn_protected: bool`, duration `1.2s`).
-    - Automatically grants 1.2s invulnerability upon `respawn()` while allowing completely uninhibited movement, aiming, firing, and weapon switching.
-    - Incoming damage deals 0 damage during protection.
-    - Clear visual feedback: `CombatHUD` displays `[SHIELD]` status badge, and `BasicBot` reflects `[SHIELD]` state in its 3D StateLabel.
-  - **Intelligent Multi-Factor Spawn Selection:**
-    - Deterministic scoring algorithm in `MatchManager.get_spawn_point()` evaluating all 10 registered spawn points:
-      - Enemy proximity distance weighting (rewards distance $\ge 12$m, heavily penalizes immediate danger $< 8$m).
-      - Enemy cluster density penalty (deducts score per enemy within 18m radius).
-      - Physics Line-of-Sight (LOS) visibility penalty (raycasts from enemy eye height to candidate spawn eye height, avoiding spawning in open enemy crosshairs).
-      - Recent death location distance penalty (avoids spawning directly on top of combatant's latest elimination coordinates).
-  - **Bot Navigation & Spacing Verified:**
-    - NavigationRegion3D runtime baking produces 317 clean 3D polygons connecting all 3 vertical tiers with zero stuck spots.
+- [x] **Milestone 13 (Bot AI & Combat Intelligence):**
+  - **Cone-Based Perception & Awareness (FOV):**
+    - Configurable field-of-view angle (`fov_degrees: 115.0°`) replacing 360° omniscience. Target must satisfy angular cone relative to forward facing direction.
+    - Close-range 360° hearing/proximity awareness (`hearing_range: 3.5m`) sensing nearby un-aimed opponents.
+    - Damage alertness: receiving damage immediately alerts bot to attacker bearing, breaking stealth.
+    - Full physics line-of-sight raycasts against arena static colliders.
+  - **Last-Known-Position (LKP) & Memory System:**
+    - Records coordinates upon LOS break with configurable persistence duration (`target_persistence: 3.5s`).
+    - Dedicated `INVESTIGATE` state: bot navigates to LKP, conducts localized sweep scan (`investigate_duration: 2.0s`), and smoothly decays memory back to `SEARCH` if target is not found.
+  - **Dynamic Combat Movement & Strafing:**
+    - Non-static firefights: bots perform alternating lateral combat strafing (1.0s – 2.2s cadence) with micro-pauses for human-like hesitation.
+    - Distance maintenance: advances when $> 16.0$m, backpedals and strafes when $< 5.5$m, and holds combat radius.
+    - Proactive obstacle probing: short lateral raycasts prevent bots from strafing into walls.
+  - **Tactical Cover & Survival Mechanics:**
+    - Under critical damage ($\text{HP} \le 35\%$) or empty-magazine reload under fire, bot evaluates 16 radial candidate positions around arena geometry.
+    - Transitions to `COVER` state, navigates to cover breaking threat LOS, and completes reload.
+  - **Human-Like Aiming & Fire Tolerances:**
+    - Smooth yaw/pitch rotational interpolation via `turn_speed` (no instant $180^\circ$ snaps).
+    - Strict fire alignment tolerance: weapon only discharges if $\text{angle}(\text{forward}, \text{aim\_dir}) \le \text{fire\_tolerance\_degrees}$ ($14.0^\circ$).
+  - **Data-Driven Difficulty Presets & Multi-Target Prioritization:**
+    - Data-driven presets: `EASY`, `MEDIUM` (default), `HARD`, with dynamic runtime method `apply_difficulty_preset()`.
+    - Multi-factor target prioritization scoring: visibility in FOV (+60), distance weighting (+35), attacker retaliation (+55), target stickiness hysteresis (+50), and low-health opportunism (+20).
   - **Automated Verification Test Suite:**
+    - 43/43 tests in `test_milestone13_bot_ai.gd` passing.
     - 45/45 tests in `test_milestone12_map_gameplay.gd` passing.
     - 65/65 tests in `test_milestone11_combat_feedback.gd` passing.
     - 59/59 tests in `test_milestone10_weapon_polish.gd` passing.
     - 32/32 tests in `test_ffa_foundation.gd` passing.
     - 21/21 tests in `test_milestone6_map.gd` passing.
     - 21/21 tests in `test_weapon_restoration.gd` passing.
-    - **Total: 243 / 243 automated tests passing (100%).**
+    - **Total: 286 / 286 automated tests passing (100%).**

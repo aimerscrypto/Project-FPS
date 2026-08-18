@@ -55,7 +55,6 @@ const NUM_DIR_INDICATORS   : int   = 8
 # -----------------------------------------------------------------------------
 # STATE
 # -----------------------------------------------------------------------------
-var _flash_tween           : Tween        = null
 var _vignette_tween        : Tween        = null
 var _low_hp_tween          : Tween        = null
 var _trail_tween           : Tween        = null
