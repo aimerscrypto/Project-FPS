@@ -36,6 +36,11 @@ const MOUSE_SENSITIVITY : float = 0.002  # radians per pixel — tune to taste
 const CAMERA_PITCH_MIN  : float = -88.0  # degrees — max look down
 const CAMERA_PITCH_MAX  : float = 88.0   # degrees — max look up
 
+# Aim Down Sights (ADS)
+const ADS_FOV           : float = 76.0   # degrees — zoomed FOV while aiming (default 90.0)
+const ADS_SENS_MULT     : float = 0.75   # mouse sensitivity multiplier while aiming
+const ADS_LERP_SPEED    : float = 14.0   # smooth transition speed into/out of ADS (~0.15s)
+
 # Capsule heights (in metres)
 const HEIGHT_STAND      : float = 1.8
 const HEIGHT_CROUCH     : float = 1.0
@@ -68,6 +73,11 @@ var _is_sliding     : bool      = false
 var _slide_velocity : Vector3   = Vector3.ZERO
 var _is_dead        : bool      = false
 var _spawn_position : Vector3   = Vector3.ZERO
+
+# ADS state
+var _is_aiming      : bool      = false
+var _ads_weight     : float     = 0.0
+var _base_fov       : float     = 90.0
 
 # Capsule dimensions tracked for smooth lerp
 var _current_height : float = HEIGHT_STAND
@@ -109,6 +119,9 @@ func _ready() -> void:
 	_camera_mount.position.y = EYE_HEIGHT_STAND - (HEIGHT_STAND * 0.5)
 	_mouse_pitch = _camera_mount.rotation_degrees.x
 	_spawn_position = global_position
+	# Cache base camera FOV
+	if _camera:
+		_base_fov = _camera.fov
 	# Connect health signals
 	if _health:
 		_health.damage_received.connect(_on_damage_received)
@@ -144,6 +157,16 @@ var deaths : int = 0
 ## Returns true if the player is currently alive.
 func is_alive() -> bool:
 	return not _is_dead
+
+
+## Returns true if the player is actively aiming down sights.
+func is_aiming() -> bool:
+	return _is_aiming
+
+
+## Returns current ADS transition weight [0.0, 1.0].
+func get_ads_weight() -> float:
+	return _ads_weight
 
 
 ## Returns target position for aim and LOS checks (torso center).
@@ -196,6 +219,10 @@ func _on_died(killer: Node) -> void:
 	_is_dead = true
 	deaths += 1
 	velocity = Vector3.ZERO
+	_is_aiming = false
+	_ads_weight = 0.0
+	if _camera:
+		_camera.fov = _base_fov
 	_damage_kick_pitch = 0.0
 	_damage_kick_yaw = 0.0
 	_damage_kick_roll = 0.0
@@ -235,6 +262,10 @@ func _on_respawned() -> void:
 	global_position = spawn_pos
 	rotation.y = spawn_yaw
 	velocity = Vector3.ZERO
+	_is_aiming = false
+	_ads_weight = 0.0
+	if _camera:
+		_camera.fov = _base_fov
 	_mouse_pitch = 0.0
 	_recoil_pitch = 0.0
 	_recoil_yaw = 0.0
@@ -273,11 +304,27 @@ func _input(event: InputEvent) -> void:
 
 
 # =============================================================================
-# PROCESS — weapon input only (does not affect physics / movement)
+# PROCESS — weapon input & ADS camera transition
 # =============================================================================
-func _process(_delta: float) -> void:
-	if _is_dead or _weapon == null:
+func _process(delta: float) -> void:
+	if _is_dead:
 		return
+
+	# ADS input (hold RMB)
+	var wants_aim : bool = Input.is_action_pressed("aim") or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	_is_aiming = wants_aim
+	_ads_weight = lerpf(_ads_weight, 1.0 if _is_aiming else 0.0, ADS_LERP_SPEED * delta)
+
+	# Smooth camera FOV zoom while aiming
+	if _camera:
+		_camera.fov = lerpf(_base_fov, ADS_FOV, _ads_weight)
+
+	if _weapon == null:
+		return
+
+	if _weapon.has_method("set_aiming"):
+		_weapon.set_aiming(_is_aiming)
+
 	# Automatic fire: hold to fire.
 	if Input.is_action_pressed("fire_primary"):
 		_weapon.try_fire()
@@ -311,9 +358,12 @@ func _physics_process(delta: float) -> void:
 # MOUSE LOOK & RECOIL
 # =============================================================================
 func _handle_mouse_look(delta: float) -> void:
+	# Sensitivity scaling during ADS
+	var current_sens : float = MOUSE_SENSITIVITY * lerpf(1.0, ADS_SENS_MULT, _ads_weight)
+
 	# 1. Horizontal mouse look (yaw) — rotate the body, absorbing horizontal recoil if counter-steering
 	if _mouse_delta.x != 0.0:
-		var yaw_delta : float = rad_to_deg(_mouse_delta.x * MOUSE_SENSITIVITY)
+		var yaw_delta : float = rad_to_deg(_mouse_delta.x * current_sens)
 		# Counter-steering absorbs active recoil yaw first
 		if yaw_delta > 0.0 and _recoil_yaw > 0.0:
 			var absorbed : float = min(yaw_delta, _recoil_yaw)
@@ -329,7 +379,7 @@ func _handle_mouse_look(delta: float) -> void:
 
 	# 2. Vertical mouse look (pitch) — modify _mouse_pitch, absorbing active recoil if pulling down
 	if _mouse_delta.y != 0.0:
-		var pitch_delta : float = rad_to_deg(_mouse_delta.y * MOUSE_SENSITIVITY)
+		var pitch_delta : float = rad_to_deg(_mouse_delta.y * current_sens)
 		# When pulling mouse DOWN (pitch_delta > 0), absorb active upward recoil first
 		if pitch_delta > 0.0 and _recoil_pitch > 0.0:
 			var absorbed : float = min(pitch_delta, _recoil_pitch)

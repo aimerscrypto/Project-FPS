@@ -1,28 +1,37 @@
-[gd_scene load_steps=6 format=3 uid="uid://assault_rifle"]
+[gd_scene format=3 uid="uid://v0eer8oi8k0i"]
 
 [ext_resource type="PackedScene" path="res://scenes/weapons/weapon_base.tscn" id="1_base"]
 [ext_resource type="Resource" path="res://data/weapons/assault_rifle.tres" id="2_data"]
-[ext_resource type="PackedScene" path="res://scenes/weapons/assault_rifle_visual.tscn" id="3_visual"]
+[ext_resource type="PackedScene" uid="uid://3c0v4wj0sou1" path="res://scenes/weapons/assault_rifle_visual.tscn" id="3_visual"]
 
 [sub_resource type="StandardMaterial3D" id="mat_muzzle"]
-albedo_color = Color(1, 0.85, 0.2, 1)
-emission_enabled = true
-emission = Color(1, 0.85, 0.2, 1)
-emission_energy_multiplier = 4.0
 shading_mode = 0
+albedo_color = Color(1, 0.92, 0.4, 1)
 
 [sub_resource type="SphereMesh" id="SphereMesh_flash"]
-radius = 0.035
-height = 0.07
+radius = 0.02
+height = 0.04
 
-[node name="AssaultRifle" instance=ExtResource("1_base")]
+[node name="AssaultRifle" unique_id=1783432631 instance=ExtResource("1_base")]
 data = ExtResource("2_data")
 
-[node name="WeaponVisual" parent="." instance=ExtResource("3_visual")]
-transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0.2, -0.18, -0.32)
-
-[node name="MuzzleFlash" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1875, -0.098, -0.819)
+[node name="RayCast3D" parent="." index="0"]
 visible = false
-mesh = SubResource("SphereMesh_flash")
+
+[node name="WeaponVisual" parent="." index="1" unique_id=1820334908 instance=ExtResource("3_visual")]
+transform = Transform3D(-0.41934505, 0.023445029, -3.6685357e-08, 0.023424463, 0.41897726, -0.017587774, -0.0009817391, -0.017560352, -0.4196316, 0.19, -0.22, -0.25)
+
+[node name="RightHandGrip" type="Marker3D" parent="." index="2" unique_id=1682256336]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.187, -0.219, -0.188)
+
+[node name="LeftHandGrip" type="Marker3D" parent="." index="3" unique_id=1907787290]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.188, -0.165, -0.385)
+
+[node name="MuzzleFlash" type="MeshInstance3D" parent="." index="4" unique_id=267746676]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1952, -0.122, -0.525)
+visible = false
 material_override = SubResource("mat_muzzle")
+mesh = SubResource("SphereMesh_flash")
+
+[node name="OpticPoint" type="Marker3D" parent="." index="5" unique_id=1992837465]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1952, -0.082, -0.32)

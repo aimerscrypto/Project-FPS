@@ -1,8 +1,8 @@
-[gd_scene load_steps=7 format=3 uid="uid://basic_bot_scene"]
+[gd_scene format=3 uid="uid://cn4bhattq33rb"]
 
-[ext_resource type="Script" path="res://scripts/enemies/basic_bot.gd" id="1_bot"]
-[ext_resource type="Script" path="res://scripts/systems/health.gd" id="2_health"]
-[ext_resource type="PackedScene" uid="uid://c5gkkrvaidv5o" path="res://assets/models/enemies/tripo_texture_aaa2553e-cfbc-486a-a5d3-69565fd7e00f_meshopt-v1.glb" id="3_character_model"]
+[ext_resource type="Script" uid="uid://df71a7k3mj4df" path="res://scripts/enemies/basic_bot.gd" id="1_bot"]
+[ext_resource type="Script" uid="uid://b0aujfqbtglci" path="res://scripts/systems/health.gd" id="2_health"]
+[ext_resource type="PackedScene" uid="uid://dr1ibyjusmlek" path="res://assets/models/player/player.glb" id="3_character_model"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.4
@@ -15,64 +15,63 @@ roughness = 0.6
 [sub_resource type="BoxMesh" id="BoxMesh_weapon"]
 size = Vector3(0.08, 0.1, 0.35)
 
+[sub_resource type="StandardMaterial3D" id="mat_flash"]
+shading_mode = 0
+albedo_color = Color(1, 0.9, 0.2, 1)
+
 [sub_resource type="SphereMesh" id="SphereMesh_flash"]
 radius = 0.04
 height = 0.08
 
-[sub_resource type="StandardMaterial3D" id="mat_flash"]
-albedo_color = Color(1, 0.9, 0.2, 1)
-shading_mode = 0
-
-[node name="BasicBot" type="CharacterBody3D" groups=["combatants"]]
+[node name="BasicBot" type="CharacterBody3D" unique_id=983820343 groups=["combatants"]]
 script = ExtResource("1_bot")
 
-[node name="Health" type="Node" parent="."]
+[node name="Health" type="Node" parent="." unique_id=8138991]
 script = ExtResource("2_health")
-max_health = 100.0
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=556669750]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("CapsuleShape3D_1")
 
-[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
-path_desired_distance = 1.0
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="." unique_id=1966876282]
 target_desired_distance = 1.5
 path_max_distance = 3.0
 
-[node name="Visuals" type="Node3D" parent="."]
+[node name="Visuals" type="Node3D" parent="." unique_id=1046002373]
 
-[node name="VisualCharacter" parent="Visuals" instance=ExtResource("3_character_model")]
-transform = Transform3D(-1.8, 0, -1.57361e-07, 0, 1.8, 0, 1.57361e-07, 0, -1.8, 0, 0.9, 0)
+[node name="VisualCharacter" parent="Visuals" unique_id=612153368 instance=ExtResource("3_character_model")]
+transform = Transform3D(2.1464784e-08, 0, 1.8, 0, 1.8, 0, -1.8, 0, 2.1464784e-08, 0, 0.9, 0)
 
-[node name="WeaponMesh" type="Node3D" parent="Visuals"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25, 0.9, -0.2)
+[node name="WeaponMesh" type="Node3D" parent="Visuals" unique_id=712295208]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.75, 0.9, -0.2)
 
-[node name="GunBody" type="MeshInstance3D" parent="Visuals/WeaponMesh"]
-mesh = SubResource("BoxMesh_weapon")
+[node name="GunBody" type="MeshInstance3D" parent="Visuals/WeaponMesh" unique_id=298996179]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1462677, 0, -0.19727696)
 material_override = SubResource("mat_dark_head")
+mesh = SubResource("BoxMesh_weapon")
 
-[node name="Muzzle" type="Node3D" parent="Visuals/WeaponMesh"]
+[node name="Muzzle" type="Node3D" parent="Visuals/WeaponMesh" unique_id=2077478192]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -0.22)
 
-[node name="Flash" type="MeshInstance3D" parent="Visuals/WeaponMesh/Muzzle"]
-visible = false
-mesh = SubResource("SphereMesh_flash")
+[node name="Flash" type="MeshInstance3D" parent="Visuals/WeaponMesh/Muzzle" unique_id=911908715]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1425908, 0, -0.19444805)
 material_override = SubResource("mat_flash")
+mesh = SubResource("SphereMesh_flash")
 
-[node name="HPLabel" type="Label3D" parent="."]
+[node name="HPLabel" type="Label3D" parent="." unique_id=2054280927]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05, 0)
+pixel_size = 0.003
 billboard = 2
 no_depth_test = true
 modulate = Color(1, 0.4, 0.4, 1)
 text = "100 / 100 HP"
 font_size = 18
-pixel_size = 0.003
 
-[node name="StateLabel" type="Label3D" parent="."]
+[node name="StateLabel" type="Label3D" parent="." unique_id=1524229584]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, 0)
+pixel_size = 0.003
 billboard = 2
 no_depth_test = true
 modulate = Color(0.3, 0.9, 1, 1)
 text = "STATE: IDLE"
 font_size = 16
-pixel_size = 0.003

@@ -1,7 +1,7 @@
 # Project FPS — Development Status
 
-**Last Updated:** 2026-08-15  
-**Current Milestone:** Milestone 6 — Arena Graybox & Tactical Map Pass (IN PROGRESS — structural redesign implemented, awaiting manual playtest)
+**Last Updated:** 2026-08-18  
+**Current Milestone:** Milestone 7 — First-Person Viewmodel & Procedural Animation / Production Assets (COMPLETE & RUNTIME VERIFIED)
 
 ---
 
@@ -12,7 +12,7 @@
 - **Milestone 3 (Combat Loop)** — COMPLETE and playtested.
 - **Milestone 4 (Basic Bot & Combat Feedback Pass)** — COMPLETE & RUNTIME VERIFIED.
 - **Milestone 5 (Free For All Foundation)** — COMPLETE & RUNTIME VERIFIED.
-- **Milestone 6 (Arena Graybox & Tactical Map Pass):** IN PROGRESS — structural redesign implemented, awaiting manual playtest:
+- **Milestone 6 (Arena Graybox & Tactical Map Pass)** — COMPLETE & RUNTIME VERIFIED:
   - **Coherent 3-Tier Spatial Architecture (50m x 50m):**
     - **Level 0 (Main Ground Floor):** Continuous, seamless physical floor spanning the full arena footprint. Contains the Center Combat Hub, Left Flank (Flank A), Right Flank (Flank B), and Staging Plazas.
     - **Level +1 (High Ground Catwalk @ Y = +3.5m):** Dedicated elevated catwalk deck (8m x 16m) overlooking Center and Right Flank with waist-high parapet protection.
@@ -33,7 +33,23 @@
     - Underpass: 2 localized soft utility worklights (energy `0.75`, range `10m`) for clear tunnel navigation.
     - Controlled mid-tone graybox material palette.
   - **10 Verified Physical Spawn Points:** Strategically distributed across Level 0, Level +1, and Level -1 with line-of-sight obstruction and dynamic safe selection via `MatchManager`.
-  - **Navigation & FFA Simulation Verified:** 316 3D navigation polygons baked across all 3 tiers with 0.25 voxel grid alignment. 21/21 tests in `test_milestone6_map.gd` and 32/32 tests in `test_ffa_foundation.gd` passing.
+  - **Navigation & FFA Simulation Verified:** 317 3D navigation polygons baked across all 3 tiers with 0.25 voxel grid alignment. 21/21 tests in `test_milestone6_map.gd` and 32/32 tests in `test_ffa_foundation.gd` passing.
+- **Milestone 7 (First-Person Viewmodel, Procedural Weapon Animation & Production Asset Integration):** COMPLETE & RUNTIME VERIFIED:
+  - **Procedural Viewmodel Animation System (`weapon_base.gd`):**
+    - Idle / breathing sinusoidal sway.
+    - Velocity-proportional Lissajous stride bobbing while walking/moving.
+    - Tactical Sprint presentation with low-ready orientation and dynamic jog pump.
+    - Smooth crouch compression offset.
+    - Mouse look inertia / lag (yaw, pitch, roll sway) with natural rotational damping.
+    - Procedural firing kick impulse and fast exponential decay.
+    - Viewmodel vibration trauma decay on sustained fire.
+    - Procedural reload animation curve sampling (magazine out, reload, bolt release).
+    - Aim Down Sights (ADS): FOV zoom (90° $\to$ 76°), mouse sensitivity reduction (0.75x), optic point alignment, and motion damping.
+    - Grip and optic markers (`RightHandGrip`, `LeftHandGrip`, `OpticPoint`, `MuzzleFlash`).
+  - **Production 3D Assets Integrated:**
+    - High-detail Assault Rifle model (`fps gun.fbx` / `fps_weapon_animated.glb`) with calibrated transforms and materials.
+    - Production 3D character model (`player.glb`) integrated into `BasicBot` visuals.
+  - **Automated Verification:** 21/21 tests in `test_weapon_restoration.gd`, 21/21 tests in `test_milestone6_map.gd`, and 32/32 tests in `test_ffa_foundation.gd` all passing.
 
 ---
 
@@ -52,15 +68,22 @@
 ```
 project-fps/
 ├── assets/
-│   └── models/ animations/ audio/ materials/ textures/ vfx/
+│   ├── models/
+│   │   ├── player/                           [Production character & weapon assets: player.glb, fps gun.fbx]
+│   │   ├── weapons/                          [Weapon models & textures: fps_weapon_animated.glb]
+│   │   ├── enemies/
+│   │   └── environment/
+│   ├── animations/ audio/ materials/ textures/ vfx/
 ├── scenes/
 │   ├── player/
-│   │   └── player.tscn                       [M1-M5: Health, CrosshairHUD, CombatHUD, Combatant]
+│   │   └── player.tscn                       [M1-M7: ADS Camera, Health, CrosshairHUD, CombatHUD, Combatant]
 │   ├── weapons/
-│   │   ├── weapon_base.tscn                  [M2]
-│   │   └── assault_rifle.tscn                [M2]
+│   │   ├── weapon_base.tscn                  [M2, M7: Procedural Viewmodel Animation base]
+│   │   ├── assault_rifle.tscn                [M2, M7: Calibrated Assault Rifle with grips & optic point]
+│   │   └── assault_rifle_visual.tscn         [M7: High-detail 3D Assault Rifle Visual]
 │   ├── enemies/
-│   │   └── basic_bot.tscn                    [M4-M5: Multi-target Combatant with 3D labels]
+│   │   ├── basic_bot.tscn                    [M4-M7: Production 3D model, Multi-target AI, 3D labels]
+│   │   └── dummy_target.tscn                 [M3: Static shooting target]
 │   ├── ui/
 │   │   ├── crosshair.tscn                    [Phase B: 2D CanvasLayer crosshair]
 │   │   └── combat_hud.tscn                   [Combat Feedback: HP display, damage flash, death overlay]
@@ -68,12 +91,13 @@ project-fps/
 │       └── test_arena.tscn                   [M6: 3-Tier Tactical Arena with KillZone & 10 Spawns]
 ├── scripts/
 │   ├── player/
-│   │   └── player_controller.gd              [M1-M6: Movement, Recoil, Health, Combatant, Fall Guard]
+│   │   └── player_controller.gd              [M1-M7: Movement, Recoil, ADS FOV Zoom, Health, Combatant]
 │   ├── weapons/
-│   │   ├── weapon_data.gd                    [M2]
-│   │   └── weapon_base.gd                    [M2]
+│   │   ├── weapon_data.gd                    [M2: Weapon resource parameters]
+│   │   └── weapon_base.gd                    [M2, M7: Procedural Sway, Bob, Kick, Reload, ADS & Firing]
 │   ├── enemies/
-│   │   └── basic_bot.gd                      [M4-M6: FFA AI, Multi-Target, Safe Respawn, Fall Guard]
+│   │   ├── basic_bot.gd                      [M4-M6: FFA AI, Multi-Target, Safe Respawn, Fall Guard]
+│   │   └── dummy_target.gd                   [M3: Damage feedback dummy]
 │   ├── gameplay/
 │   │   ├── match_manager.gd                  [M5: FFA Match lifecycle, Timer, Scores, Safe Spawns]
 │   │   └── kill_zone.gd                      [M6: Reusable Fall Protection / Kill Boundary]
@@ -87,7 +111,8 @@ project-fps/
 │       ├── damage_info.gd                    [M3: Damage payload data container]
 │       ├── test_ffa_foundation.gd            [M5: Automated FFA unit & integration test suite]
 │       ├── test_ffa_sim.gd                   [M5: Live FFA multi-combatant simulation test]
-│       └── test_milestone6_map.gd            [M6: Automated Map & Tactical Pass test suite]
+│       ├── test_milestone6_map.gd            [M6: Automated Map & Tactical Pass test suite]
+│       └── test_weapon_restoration.gd        [M7: Automated Weapon & Viewmodel verification test suite]
 └── data/
     ├── weapons/
     │   └── assault_rifle.tres                [M2]
@@ -156,7 +181,11 @@ project-fps/
 - [x] **Strict 4-Ramp System:** Exactly 4 vertical ramps connecting Ground to Catwalk and Ground to Underpass with zero decorative ramps.
 - [x] **Fall Protection & KillZone3D:** KillZone at $Y = -8.0$m and safety guards in Player/Bot controllers preventing infinite falls.
 - [x] **Balanced Daytime Lighting:** Single sun (1.0) + natural ambient (0.42) + soft underpass lights (0.75) with calibrated mid-tone materials.
-- [x] **3D NavigationMesh Baking:** 316 polygons baked with 0.25 voxel grid alignment without precision warnings.
+- [x] **3D NavigationMesh Baking:** 317 polygons baked with 0.25 voxel grid alignment without precision warnings.
 - [x] **10 Verified Spawn Points:** Solid ground placement with line-of-sight obstruction and dynamic safe spawn integration.
-- [x] **Automated Regression Test Suite:** 32/32 tests in `test_ffa_foundation.gd` passing.
-- [x] **Automated Milestone 6 Test Suite:** 21/21 tests in `test_milestone6_map.gd` passing.
+- [x] **Procedural Viewmodel Animations & ADS:** Idle sway, Lissajous walk bob, tactical sprint pump, crouch compression, mouse look inertia, recoil kick, and smooth ADS zoom.
+- [x] **Production 3D Assets:** High-detail weapon visual and character bot models assigned and aligned.
+- [x] **Automated Regression Test Suites:**
+  - 32/32 tests in `test_ffa_foundation.gd` passing.
+  - 21/21 tests in `test_milestone6_map.gd` passing.
+  - 21/21 tests in `test_weapon_restoration.gd` passing.
