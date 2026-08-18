@@ -6,11 +6,11 @@
 
 [sub_resource type="StandardMaterial3D" id="mat_muzzle"]
 shading_mode = 0
-albedo_color = Color(1, 0.92, 0.4, 1)
+albedo_color = Color(1, 0.78, 0.22, 1)
 
 [sub_resource type="SphereMesh" id="SphereMesh_flash"]
-radius = 0.02
-height = 0.04
+radius = 0.026
+height = 0.052
 
 [node name="AssaultRifle" unique_id=1783432631 instance=ExtResource("1_base")]
 data = ExtResource("2_data")
@@ -35,3 +35,6 @@ mesh = SubResource("SphereMesh_flash")
 
 [node name="OpticPoint" type="Marker3D" parent="." index="5" unique_id=1992837465]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1952, -0.082, -0.32)
+
+[node name="EjectionPort" type="Marker3D" parent="." index="6"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.22, -0.19, -0.22)

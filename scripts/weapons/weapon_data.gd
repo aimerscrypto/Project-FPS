@@ -36,3 +36,12 @@ class_name WeaponData
 @export var recoil_vertical   : float = 1.05  # degrees upward kick per shot
 @export var recoil_horizontal : float = 0.35  # max random horizontal degrees per shot
 @export var recoil_recovery   : float = 4.5   # degrees/second recovery toward rest
+
+# --- Audio Keys (AudioManager lookup) ---
+@export var fire_sound    : String = "ar_fire"
+@export var dryfire_sound : String = "ar_dryfire"
+@export var reload_sound  : String = "ar_reload"
+
+# --- Presentation & FX Profiles ---
+@export var casing_type    : String = "rifle"   # "rifle" or "pistol"
+@export var reload_profile : String = "rifle"   # "rifle" or "pistol"

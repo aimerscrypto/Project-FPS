@@ -13,6 +13,7 @@ extends Node3D
 # =============================================================================
 
 signal ammo_changed(current_ammo: int, reserve_ammo: int)
+signal target_hit(is_headshot: bool)
 
 # -----------------------------------------------------------------------------
 # EXPORTS
@@ -34,6 +35,7 @@ signal ammo_changed(current_ammo: int, reserve_ammo: int)
 @onready var _right_grip    : Node3D       = find_child("RightHandGrip", true, false)
 @onready var _left_grip     : Node3D       = find_child("LeftHandGrip", true, false)
 @onready var _optic_point    : Node3D       = find_child("OpticPoint", true, false)
+@onready var _ejection_port : Node3D       = find_child("EjectionPort", true, false)
 
 var _base_visual_transform     : Transform3D = Transform3D.IDENTITY
 var _base_muzzle_transform     : Transform3D = Transform3D.IDENTITY
@@ -129,8 +131,8 @@ const VIBRATION_DECAY       : float   = 24.0                              # rate
 const VIBRATION_FREQ        : float   = 70.0                              # vibration oscillation frequency
 
 # 8. Procedural Reload Animation Keyframes (Arcade Root Transform Motion)
-# Keyframe timestamps normalized to data.reload_time (2.0s)
-const RELOAD_KEYFRAMES : Array[Dictionary] = [
+# Rifle reload keyframes (magazine rock out, slap in, bolt pull & release)
+const RELOAD_KEYFRAMES_RIFLE : Array[Dictionary] = [
 	{ "t": 0.00, "pos": Vector3(0.000,  0.000,  0.000), "rot": Vector3(0.000,  0.000,  0.000) },
 	{ "t": 0.22, "pos": Vector3(0.012, -0.085,  0.025), "rot": Vector3(-0.080, -0.100,  0.200) }, # Lower & roll tilt to expose magwell
 	{ "t": 0.46, "pos": Vector3(0.015, -0.090,  0.030), "rot": Vector3(-0.060, -0.110,  0.220) }, # Mid-reload hold in reload stance (mag out)
@@ -141,6 +143,26 @@ const RELOAD_KEYFRAMES : Array[Dictionary] = [
 	{ "t": 0.94, "pos": Vector3(-0.001, 0.002, -0.002), "rot": Vector3(0.004,  0.002, -0.005) }, # Soft ascent ease-out overshoot
 	{ "t": 1.00, "pos": Vector3(0.000,  0.000,  0.000), "rot": Vector3(0.000,  0.000,  0.000) }, # Return to rest position
 ]
+
+# Pistol reload keyframes (compact slide tilt, grip mag slap, thumb slide release snap)
+const RELOAD_KEYFRAMES_PISTOL : Array[Dictionary] = [
+	{ "t": 0.00, "pos": Vector3(0.000,  0.000,  0.000), "rot": Vector3(0.000,  0.000,  0.000) },
+	{ "t": 0.18, "pos": Vector3(0.008, -0.055,  0.015), "rot": Vector3(-0.050,  0.070,  0.140) }, # Tilt slide in to drop mag
+	{ "t": 0.40, "pos": Vector3(0.010, -0.060,  0.018), "rot": Vector3(-0.035,  0.080,  0.150) }, # Hold in reload stance
+	{ "t": 0.50, "pos": Vector3(0.004, -0.030,  0.008), "rot": Vector3(0.030,  0.035,  0.090) }, # Mag slap into grip base
+	{ "t": 0.60, "pos": Vector3(0.008, -0.045,  0.016), "rot": Vector3(-0.015,  0.050,  0.110) }, # Rebound from slap
+	{ "t": 0.72, "pos": Vector3(0.002, -0.022,  0.020), "rot": Vector3(0.020,  0.020,  0.040) }, # Thumb slide release snap
+	{ "t": 0.84, "pos": Vector3(-0.001, -0.008, 0.003), "rot": Vector3(-0.008, -0.008,  0.010) }, # Settle overshoot
+	{ "t": 1.00, "pos": Vector3(0.000,  0.000,  0.000), "rot": Vector3(0.000,  0.000,  0.000) }, # Rest
+]
+
+# Alias for backward compatibility
+const RELOAD_KEYFRAMES = RELOAD_KEYFRAMES_RIFLE
+
+# 8b. Equip Ready-Up Presentation Offsets (~0.20s switch animation)
+const EQUIP_POS_OFFSET : Vector3 = Vector3(0.008, -0.110, 0.035)  # Raised smoothly from 11cm below
+const EQUIP_ROT_OFFSET : Vector3 = Vector3(-0.200, 0.030, -0.060) # Tilted up from -11.5° pitch down
+
 
 # 9. Aim Down Sights (ADS) Presentation (Optic Alignment & Stance)
 const ADS_POS_OFFSET        : Vector3 = Vector3(-0.1952, 0.0820, 0.0700) # Aligns optic centerline precisely with camera (0,0)
@@ -372,7 +394,20 @@ func _fire() -> void:
 	_time_since_fired = 0.0
 
 	# Audio feedback (2D player weapon fire)
-	AudioManager.play_2d("ar_fire", AudioManager.BUS_SFX, 0.0, 0.04)
+	var snd_fire : String = data.fire_sound if (data and not data.fire_sound.is_empty()) else "ar_fire"
+	AudioManager.play_2d(snd_fire, AudioManager.BUS_SFX, 0.0, 0.04)
+
+	# Shell casing ejection
+	var casing_type : String = data.casing_type if (data and not data.casing_type.is_empty()) else "rifle"
+	var eject_pos : Vector3 = global_position + global_transform.basis * Vector3(0.2, -0.15, -0.25)
+	var eject_basis : Basis = global_transform.basis
+	if is_instance_valid(_ejection_port):
+		eject_pos = _ejection_port.global_position
+		eject_basis = _ejection_port.global_transform.basis
+	var p_vel := _player.velocity if is_instance_valid(_player) else Vector3.ZERO
+	var casing_mgr = get_node_or_null("/root/CasingManager")
+	if casing_mgr and casing_mgr.has_method("eject_casing"):
+		casing_mgr.eject_casing(eject_pos, eject_basis, casing_type, p_vel)
 
 	# Hitscan
 	_do_hitscan()
@@ -418,10 +453,16 @@ func _fire() -> void:
 
 func _dry_fire() -> void:
 	# Audio feedback (dry fire click)
-	AudioManager.play_2d("ar_dryfire", AudioManager.BUS_SFX, -2.0, 0.03)
+	var snd_dry : String = data.dryfire_sound if (data and not data.dryfire_sound.is_empty()) else "ar_dryfire"
+	AudioManager.play_2d(snd_dry, AudioManager.BUS_SFX, -2.0, 0.03)
+
+	# Subtle visual trigger click kick
+	_current_kick_pos.z = clampf(_current_kick_pos.z + 0.0035, 0.0, KICK_POS_MAX.z)
+	_current_kick_rot.x = clampf(_current_kick_rot.x + 0.010, -KICK_ROT_MAX.x, KICK_ROT_MAX.x)
+
 	# Limit dry-fire spam messaging.
 	print("[Weapon] DRY FIRE — magazine empty. Press R to reload.")
-	_fire_timer = 0.3  # short delay before re-triggering dry fire message
+	_fire_timer = 0.2  # short delay before re-triggering dry fire message
 
 
 # =============================================================================
@@ -479,7 +520,9 @@ func _do_hitscan() -> void:
 				did_damage = true
 
 			if did_damage:
-				AudioManager.play_hitmarker(dmg_info.hit_type == DamageInfo.HitType.HEAD)
+				var is_headshot : bool = (dmg_info.hit_type == DamageInfo.HitType.HEAD)
+				AudioManager.play_hitmarker(is_headshot)
+				target_hit.emit(is_headshot)
 
 		# Spawn 3D impact audio & visual marker at hit point
 		AudioManager.play_3d("impact", hit_point, AudioManager.BUS_SFX, -2.0, 0.06, 40.0, 4.0)
@@ -520,7 +563,8 @@ func _start_reload() -> void:
 	_state = WeaponState.RELOADING
 	_reload_timer = data.reload_time
 	# Audio feedback (2D player weapon reload)
-	AudioManager.play_2d("ar_reload", AudioManager.BUS_SFX, -1.0, 0.0)
+	var snd_reload : String = data.reload_sound if (data and not data.reload_sound.is_empty()) else "ar_reload"
+	AudioManager.play_2d(snd_reload, AudioManager.BUS_SFX, -1.0, 0.0)
 	print("[Weapon] Reloading... (%.1fs)" % data.reload_time)
 
 
@@ -607,9 +651,10 @@ func get_ammo_info() -> Dictionary:
 ## Evaluates procedural reload keyframes across normalized progress [0.0, 1.0] using smoothstep blending.
 func _sample_reload_pose(p: float) -> Dictionary:
 	var clamped_p : float = clampf(p, 0.0, 1.0)
-	for i in range(RELOAD_KEYFRAMES.size() - 1):
-		var k0 : Dictionary = RELOAD_KEYFRAMES[i]
-		var k1 : Dictionary = RELOAD_KEYFRAMES[i + 1]
+	var keyframes : Array[Dictionary] = RELOAD_KEYFRAMES_PISTOL if (data and data.reload_profile == "pistol") else RELOAD_KEYFRAMES_RIFLE
+	for i in range(keyframes.size() - 1):
+		var k0 : Dictionary = keyframes[i]
+		var k1 : Dictionary = keyframes[i + 1]
 		var t0 : float = float(k0["t"])
 		var t1 : float = float(k1["t"])
 		if clamped_p >= t0 and clamped_p <= t1:
@@ -792,9 +837,18 @@ func _update_weapon_motion(delta: float) -> void:
 	var current_ads_pos := ads_pos_target * _ads_weight
 	var current_ads_rot := ADS_ROT_OFFSET * _ads_weight
 
-	# 11. Composite Final Transform Offset
-	var total_pos := ads_damped_idle_pos + ads_damped_bob_pos + _current_sprint_pos + _current_crouch_pos + ads_damped_look_pos + _current_kick_pos + vib_pos + _current_reload_pos + current_ads_pos
-	var total_rot := ads_damped_idle_rot + ads_damped_bob_rot + _current_sprint_rot + _current_crouch_rot + ads_damped_look_rot + _current_kick_rot + vib_rot + _current_reload_rot + current_ads_rot
+	# 11. Equip Ready-Up Presentation (~0.20s switch animation)
+	var current_equip_pos := Vector3.ZERO
+	var current_equip_rot := Vector3.ZERO
+	if _equip_timer > 0.0:
+		var equip_p : float = clampf(1.0 - (_equip_timer / EQUIP_DURATION), 0.0, 1.0)
+		var equip_s : float = equip_p * equip_p * (3.0 - 2.0 * equip_p)
+		current_equip_pos = EQUIP_POS_OFFSET.lerp(Vector3.ZERO, equip_s)
+		current_equip_rot = EQUIP_ROT_OFFSET.lerp(Vector3.ZERO, equip_s)
+
+	# 12. Composite Final Transform Offset
+	var total_pos := ads_damped_idle_pos + ads_damped_bob_pos + _current_sprint_pos + _current_crouch_pos + ads_damped_look_pos + _current_kick_pos + vib_pos + _current_reload_pos + current_ads_pos + current_equip_pos
+	var total_rot := ads_damped_idle_rot + ads_damped_bob_rot + _current_sprint_rot + _current_crouch_rot + ads_damped_look_rot + _current_kick_rot + vib_rot + _current_reload_rot + current_ads_rot + current_equip_rot
 	var rot_basis := Basis.from_euler(total_rot)
 
 	# Apply smoothly to visual nodes while strictly preserving their authored base transforms

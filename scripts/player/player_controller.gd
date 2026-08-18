@@ -57,6 +57,7 @@ const HEIGHT_LERP_SPEED : float = 12.0   # how fast the capsule shrinks/grows
 @onready var _collision    : CollisionShape3D = $CollisionShape3D
 @onready var _health       : Health          = $Health
 @onready var _combat_hud   : CanvasLayer     = $CombatHUD
+@onready var _crosshair_hud : CanvasLayer     = find_child("CrosshairHUD", true, false)
 
 # Weapon references & inventory slots (Slot 0 = Assault Rifle, Slot 1 = Pistol)
 @onready var _weapon_primary   : Node3D = find_child("AssaultRifle", true, false)
@@ -153,6 +154,8 @@ func _ready() -> void:
 			w.set_camera(_camera)
 		if w.has_signal("ammo_changed"):
 			w.ammo_changed.connect(_on_weapon_ammo_changed.bind(w))
+		if w.has_signal("target_hit"):
+			w.target_hit.connect(_on_target_hit)
 
 	# Initialize primary weapon (Slot 0) as equipped, unequip secondary
 	_active_slot_index = 0
@@ -319,6 +322,12 @@ func _on_weapon_ammo_changed(current: int, reserve: int, weapon_source: Node = n
 		return
 	if _combat_hud and _combat_hud.has_method("update_ammo"):
 		_combat_hud.update_ammo(current, reserve)
+
+
+func _on_target_hit(is_headshot: bool) -> void:
+	if _crosshair_hud and _crosshair_hud.has_method("show_hitmarker"):
+		_crosshair_hud.show_hitmarker(is_headshot)
+
 
 
 func _on_match_ended(_winner: Node) -> void:

@@ -23,11 +23,11 @@ size = Vector3(0.034, 0.115, 0.048)
 
 [sub_resource type="StandardMaterial3D" id="mat_muzzle"]
 shading_mode = 0
-albedo_color = Color(1, 0.9, 0.35, 1)
+albedo_color = Color(1, 0.95, 0.65, 1)
 
 [sub_resource type="SphereMesh" id="SphereMesh_flash"]
-radius = 0.018
-height = 0.036
+radius = 0.016
+height = 0.032
 
 [node name="Pistol" instance=ExtResource("1_base")]
 data = ExtResource("2_data")
@@ -60,3 +60,6 @@ mesh = SubResource("SphereMesh_flash")
 
 [node name="OpticPoint" type="Marker3D" parent="." index="5"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.138, -0.28)
+
+[node name="EjectionPort" type="Marker3D" parent="." index="6"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.195, -0.145, -0.26)

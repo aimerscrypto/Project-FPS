@@ -28,6 +28,9 @@ const SOUND_PATHS : Dictionary = {
 	"ar_fire": "res://assets/audio/weapons/ar_fire.wav",
 	"ar_dryfire": "res://assets/audio/weapons/ar_dryfire.wav",
 	"ar_reload": "res://assets/audio/weapons/ar_reload.wav",
+	"pistol_fire": "res://assets/audio/weapons/pistol_fire.wav",
+	"pistol_dryfire": "res://assets/audio/weapons/pistol_dryfire.wav",
+	"pistol_reload": "res://assets/audio/weapons/pistol_reload.wav",
 	# Player
 	"footstep": "res://assets/audio/player/footstep.wav",
 	"jump": "res://assets/audio/player/jump.wav",
