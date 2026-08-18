@@ -44,6 +44,10 @@ func _run_tests() -> void:
 	await process_frame
 	await process_frame
 
+	var match_mgr = arena.get_node_or_null("MatchManager")
+	if match_mgr and match_mgr.has_method("_begin_playing"):
+		match_mgr._begin_playing()
+
 	print("[TEST SUITE] Arena instantiated. Beginning unit & integration tests.\n")
 
 	_test_combatants_count(arena)

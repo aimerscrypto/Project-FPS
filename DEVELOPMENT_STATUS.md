@@ -1,7 +1,7 @@
 # Project FPS — Development Status
 
 **Last Updated:** 2026-08-18  
-**Current Milestone:** Milestone 13 — Bot AI & Combat Intelligence (COMPLETE & RUNTIME VERIFIED)
+**Current Milestone:** Milestone 14 — Playable Game Loop & Arena Gameplay Systems (COMPLETE & RUNTIME VERIFIED)
 
 ---
 
@@ -308,3 +308,37 @@ project-fps/
     - 21/21 tests in `test_milestone6_map.gd` passing.
     - 21/21 tests in `test_weapon_restoration.gd` passing.
     - **Total: 286 / 286 automated tests passing (100%).**
+- [x] **Milestone 14 (Playable Game Loop & Arena Gameplay Systems):**
+  - **Dynamic Arena Pickups (Health Kits & Ammo Packs):**
+    - Created reusable `Pickup` (`Area3D`) component with procedural hover rotation & vertical bobbing.
+    - `pickup_health.tscn`: Low-poly health kit with glowing green cross restoring 35 HP. Full-health waste prevention.
+    - `pickup_ammo.tscn`: Low-poly ammo crate with glowing amber ring restoring full magazine and reserve ammo for Player & Bot weapons.
+    - 15s cooldown respawn lifecycle with smooth procedural scale pop-in.
+    - 4 pickups strategically distributed across the arena: Level -1 Underpass (`Pickup_Health_Underpass`), Level 0 West Flank (`Pickup_Health_FlankA`), Level +1 Catwalk (`Pickup_Ammo_Catwalk`), Level 0 North Plaza (`Pickup_Ammo_Plaza`).
+    - Bot AI integration: Low-HP bots ($\text{HP} \le 45\%$) actively query and navigate toward nearest active HealthKit during search patrol; empty-ammo bots seek AmmoPacks.
+  - **Pre-Match Staging Countdown ("3... 2... 1... FIGHT!"):**
+    - 3.0s pre-match freeze state in `MatchManager` (`MatchState.STAGING`).
+    - Player and bot movement, jumping, and weapon firing locked at spawn during countdown.
+    - Animated `StagingOverlay` on `CombatHUD` displaying large countdown numbers with bounce scale tweening and vivid gold "FIGHT!" badge.
+    - Procedural countdown tick and fight fanfare sound effects in `AudioManager`.
+  - **Kill Streaks & Combat Accolades:**
+    - `MatchManager` streak tracking and multi-kill time-window calculation (4.0s).
+    - Accolade hierarchy: `FIRST BLOOD!` (+50 pts), `DOUBLE KILL!` (+50 pts), `TRIPLE KILL!` (+100 pts), `MULTI KILL!` (+150 pts), `KILLING SPREE!` (3 kills, +100 pts), `RAMPAGE!` (5 kills, +200 pts), `DOMINATING!` (7 kills, +300 pts), `UNSTOPPABLE!` (10 kills, +500 pts).
+    - Animated `AccoladeOverlay` in `CombatHUD` with back-ease scale pop-in, glowing borders, and gold/crimson styling.
+    - Sound synthesis in `AudioManager` (`play_accolade(is_multikill)`).
+  - **Submachine Gun (SMG) CQC Weapon & Slot 3:**
+    - Data-driven `data/weapons/smg.tres`: 18 damage, 1.75x headshot, 15 rounds/sec cadence, 35-round magazine, 140 reserve ammo, 1.5s reload, 1.4° hipfire spread, 50m max range.
+    - Low-poly 3D weapon prefab `scenes/weapons/smg.tscn` inheriting `weapon_base.tscn`.
+    - Input action `weapon_slot_3` (Key `3`) added to `project.godot`.
+    - PlayerController inventory updated with Slot 0 (AR), Slot 1 (SMG), Slot 2 (Pistol) with seamless key and scroll switching.
+  - **In-Match Live TAB Scoreboard:**
+    - Hold `Tab` during active match to inspect live FFA standings sorted by score/kills descending, then deaths ascending.
+    - Real-time highlight for local player `(YOU)` in cyan.
+  - **In-Game Pause & Settings Menu:**
+    - Press `Escape` / `ui_cancel` to toggle pause overlay and liberate mouse cursor.
+    - Live Mouse Sensitivity slider (`0.0005` to `0.0080` rad/pixel) dynamically modifying PlayerController sensitivity.
+    - Master Volume and SFX Volume sliders controlling Godot audio buses with linear-to-dB conversion.
+    - "RESUME MATCH" and "RESTART MATCH" interactive buttons.
+  - **Automated Verification Test Suite:**
+    - 24/24 tests in `test_milestone14_game_loop.gd` passing.
+    - **Total: 310 / 310 automated tests passing across all 8 project test suites (100% pass rate).**

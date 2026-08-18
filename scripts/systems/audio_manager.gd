@@ -31,6 +31,7 @@ const SOUND_PATHS : Dictionary = {
 	"pistol_fire": "res://assets/audio/weapons/pistol_fire.wav",
 	"pistol_dryfire": "res://assets/audio/weapons/pistol_dryfire.wav",
 	"pistol_reload": "res://assets/audio/weapons/pistol_reload.wav",
+	"smg_fire": "res://assets/audio/weapons/smg_fire.wav",
 	# Player
 	"footstep": "res://assets/audio/player/footstep.wav",
 	"jump": "res://assets/audio/player/jump.wav",
@@ -44,10 +45,19 @@ const SOUND_PATHS : Dictionary = {
 	"impact": "res://assets/audio/combat/impact.wav",
 	"bot_damage": "res://assets/audio/combat/bot_damage.wav",
 	"bot_death": "res://assets/audio/combat/bot_death.wav",
+	# Pickups & Accolades
+	"pickup_health": "res://assets/audio/gameplay/pickup_health.wav",
+	"pickup_ammo": "res://assets/audio/gameplay/pickup_ammo.wav",
+	"accolade_streak": "res://assets/audio/ui/accolade_streak.wav",
+	"accolade_multikill": "res://assets/audio/ui/accolade_multikill.wav",
+	"staging_tick": "res://assets/audio/ui/staging_tick.wav",
+	"staging_go": "res://assets/audio/ui/staging_go.wav",
 	# UI
 	"hitmarker": "res://assets/audio/ui/hitmarker.wav",
 	"headshot": "res://assets/audio/ui/headshot.wav",
 	"kill_confirm": "res://assets/audio/ui/kill_confirm.wav",
+	"ui_click": "res://assets/audio/ui/ui_click.wav",
+	"ui_pause": "res://assets/audio/ui/ui_pause.wav",
 	# Environment
 	"arena_ambient": "res://assets/audio/environment/arena_ambient.wav",
 }
@@ -97,9 +107,106 @@ func _preload_audio_streams() -> void:
 			if stream is AudioStream:
 				_streams[sound_key] = stream
 			else:
-				push_warning("AudioManager: Resource at '%s' is not an AudioStream." % path)
+				_streams[sound_key] = _generate_synthetic_sound(sound_key)
 		else:
-			push_warning("AudioManager: Audio asset missing at '%s'." % path)
+			# Automatically synthesize missing sound effect cleanly
+			_streams[sound_key] = _generate_synthetic_sound(sound_key)
+
+
+func _generate_synthetic_sound(key: String) -> AudioStreamWAV:
+	var rate := 22050
+	var samples := PackedFloat32Array()
+
+	match key:
+		"staging_tick":
+			var count : int = int(rate * 0.08) # 80ms
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = 1.0 - (float(i) / float(count))
+				samples[i] = sin(t * TAU * 880.0) * env * 0.6
+		"staging_go":
+			var count : int = int(rate * 0.40) # 400ms
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = pow(1.0 - (float(i) / float(count)), 0.6)
+				var s : float = sin(t * TAU * 1760.0) * 0.5 + sin(t * TAU * 880.0) * 0.4
+				samples[i] = s * env * 0.7
+		"pickup_health":
+			var count : int = int(rate * 0.28) # 280ms upward chime
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = sin((float(i) / float(count)) * PI)
+				var freq : float = 523.25 + (float(i) / float(count)) * 523.25 # C5 to C6
+				samples[i] = (sin(t * TAU * freq) * 0.6 + sin(t * TAU * freq * 2.0) * 0.2) * env * 0.7
+		"pickup_ammo":
+			var count : int = int(rate * 0.22) # 220ms metallic rack
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = 1.0 - (float(i) / float(count))
+				var noise : float = randf_range(-0.3, 0.3)
+				var tone : float = sin(t * TAU * 600.0) * 0.4 + sin(t * TAU * 1200.0) * 0.3
+				samples[i] = (tone + noise) * env * 0.65
+		"smg_fire":
+			var count : int = int(rate * 0.10) # 100ms snappy pop
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = pow(1.0 - (float(i) / float(count)), 3.0)
+				var noise : float = randf_range(-0.5, 0.5)
+				var punch : float = sin(t * TAU * (220.0 * (1.0 - t * 6.0))) * 0.6
+				samples[i] = (punch + noise) * env * 0.8
+		"accolade_streak":
+			var count : int = int(rate * 0.55) # 550ms triumphant chord
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = pow(1.0 - (float(i) / float(count)), 0.8)
+				var c : float = sin(t * TAU * 523.25) * 0.35 + sin(t * TAU * 659.25) * 0.35 + sin(t * TAU * 783.99) * 0.30
+				samples[i] = c * env * 0.75
+		"accolade_multikill":
+			var count : int = int(rate * 0.45) # 450ms energetic fanfare
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = pow(1.0 - (float(i) / float(count)), 0.7)
+				var c : float = sin(t * TAU * 587.33) * 0.35 + sin(t * TAU * 739.99) * 0.35 + sin(t * TAU * 880.00) * 0.30
+				samples[i] = c * env * 0.75
+		"ui_click":
+			var count : int = int(rate * 0.03) # 30ms click
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = 1.0 - (float(i) / float(count))
+				samples[i] = sin(t * TAU * 1200.0) * env * 0.5
+		"ui_pause":
+			var count : int = int(rate * 0.16) # 160ms soft descending
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = 1.0 - (float(i) / float(count))
+				var freq : float = 800.0 - (float(i) / float(count)) * 300.0
+				samples[i] = sin(t * TAU * freq) * env * 0.4
+		_:
+			var count : int = int(rate * 0.05)
+			samples.resize(count)
+			for i in range(count):
+				samples[i] = 0.0
+
+	var wav := AudioStreamWAV.new()
+	wav.format = AudioStreamWAV.FORMAT_16_BITS
+	wav.mix_rate = rate
+	wav.stereo = false
+	var byte_array := PackedByteArray()
+	byte_array.resize(samples.size() * 2)
+	for i in range(samples.size()):
+		var val : int = int(clampf(samples[i], -1.0, 1.0) * 32767.0)
+		byte_array.encode_s16(i * 2, val)
+	wav.data = byte_array
+	return wav
 
 
 # =============================================================================
@@ -255,6 +362,42 @@ func play_kill_confirm(is_headshot: bool = false) -> void:
 ## Helper to trigger a tactical respawn sound cue.
 func play_respawn() -> void:
 	play_2d("respawn", BUS_SFX, 0.0, 0.0)
+
+
+## Helper to trigger staging countdown tick blip.
+func play_staging_tick() -> void:
+	play_2d("staging_tick", BUS_UI, 2.0, 0.0)
+
+
+## Helper to trigger staging fight start horn.
+func play_staging_go() -> void:
+	play_2d("staging_go", BUS_UI, 3.0, 0.0)
+
+
+## Helper to trigger pickup collection audio.
+func play_pickup(pickup_type: String = "health") -> void:
+	if pickup_type == "health":
+		play_2d("pickup_health", BUS_SFX, 1.0, 0.02)
+	else:
+		play_2d("pickup_ammo", BUS_SFX, 1.0, 0.02)
+
+
+## Helper to trigger accolade stinger audio.
+func play_accolade(is_multikill: bool = false) -> void:
+	if is_multikill:
+		play_2d("accolade_multikill", BUS_UI, 2.5, 0.0)
+	else:
+		play_2d("accolade_streak", BUS_UI, 2.5, 0.0)
+
+
+## Helper to trigger UI click sound.
+func play_ui_click() -> void:
+	play_2d("ui_click", BUS_UI, -1.0, 0.04)
+
+
+## Helper to trigger UI pause sound.
+func play_ui_pause() -> void:
+	play_2d("ui_pause", BUS_UI, 0.0, 0.0)
 
 
 ## Starts looping ambient background audio on the Ambience bus.

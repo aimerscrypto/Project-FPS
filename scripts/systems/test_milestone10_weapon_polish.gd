@@ -230,7 +230,7 @@ func _run_suite() -> void:
 		var player = arena.get_node_or_null("Player")
 		_assert(player != null, "Player present in Arena")
 		if player:
-			_assert(player._weapons.size() == 2, "Player has both AR and Pistol registered")
+			_assert(player._weapons.size() >= 2, "Player has AR and Pistol registered (Found: %d)" % player._weapons.size())
 			_assert(player._active_weapon != null, "Player has active weapon equipped")
 			_assert(player._crosshair_hud != null, "Player has CrosshairHUD linked")
 

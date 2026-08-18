@@ -83,6 +83,7 @@ var _state          : State   = State.SEARCH
 var _target         : Node3D  = null
 var _spawn_position : Vector3 = Vector3.ZERO
 var _is_match_ended : bool    = false
+var _match_mgr      : MatchManager = null
 
 # Combatant Score tracking
 var kills  : int = 0
@@ -151,8 +152,10 @@ func _ready() -> void:
 	var tree := get_tree()
 	if tree:
 		var match_mgr = tree.get_first_node_in_group("match_manager")
-		if match_mgr and match_mgr.has_signal("match_ended"):
-			match_mgr.match_ended.connect(_on_match_ended)
+		if match_mgr is MatchManager:
+			_match_mgr = match_mgr
+			if not _match_mgr.match_ended.is_connected(_on_match_ended):
+				_match_mgr.match_ended.connect(_on_match_ended)
 
 	# Setup hit flash material
 	_flash_material = StandardMaterial3D.new()
@@ -298,6 +301,11 @@ func _physics_process(delta: float) -> void:
 		if not is_on_floor():
 			velocity.y -= gravity * delta
 			move_and_slide()
+		return
+
+	# Pre-match staging lock: freeze combatants at spawn
+	if _match_mgr != null and _match_mgr.is_staging():
+		velocity = Vector3.ZERO
 		return
 
 	# Fall / out-of-bounds safety check
@@ -729,6 +737,20 @@ func _process_search_state(delta: float) -> void:
 	if _current_ammo < magazine_size and not _is_reloading:
 		_start_reload()
 
+	# High-value objective seeking: Low HP -> Seek HealthKit
+	if _health and _health.current_health <= cover_health_threshold + 10.0:
+		var hp_pickup := _find_nearby_pickup(0) # PickupType.HEALTH
+		if hp_pickup != null:
+			_patrol_target_pos = hp_pickup.global_position
+			_patrol_timer = 2.5
+
+	# Objective seeking: Empty Ammo -> Seek AmmoPack
+	elif _current_ammo == 0:
+		var ammo_pickup := _find_nearby_pickup(1) # PickupType.AMMO
+		if ammo_pickup != null:
+			_patrol_target_pos = ammo_pickup.global_position
+			_patrol_timer = 2.5
+
 	if _patrol_timer <= 0.0 or _patrol_target_pos == Vector3.ZERO:
 		var offset := Vector3(randf_range(-14.0, 14.0), 0.0, randf_range(-14.0, 14.0))
 		_patrol_target_pos = _spawn_position + offset
@@ -742,6 +764,19 @@ func _process_search_state(delta: float) -> void:
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, move_speed * 4.0 * delta)
 		velocity.z = move_toward(velocity.z, 0.0, move_speed * 4.0 * delta)
+
+
+func _find_nearby_pickup(type_idx: int) -> Node3D:
+	var pickups := get_tree().get_nodes_in_group("pickups")
+	var best_pickup : Node3D = null
+	var best_dist : float = 26.0
+	for p in pickups:
+		if p is Node3D and p.get("is_active") == true and p.get("pickup_type") == type_idx:
+			var d : float = global_position.distance_to((p as Node3D).global_position)
+			if d < best_dist:
+				best_dist = d
+				best_pickup = p as Node3D
+	return best_pickup
 
 
 # =============================================================================

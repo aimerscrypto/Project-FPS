@@ -1,0 +1,68 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/gameplay/pickup.gd" id="1_pickup"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_pickup"]
+height = 2.0
+radius = 1.2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_crate_body"]
+albedo_color = Color(0.22, 0.26, 0.3, 1)
+metallic = 0.6
+roughness = 0.35
+
+[sub_resource type="BoxMesh" id="BoxMesh_crate_body"]
+material = SubResource("StandardMaterial3D_crate_body")
+size = Vector3(0.55, 0.38, 0.35)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ammo_trim"]
+albedo_color = Color(1, 0.72, 0.15, 1)
+emission_enabled = true
+emission = Color(1, 0.65, 0.1, 1)
+emission_energy_multiplier = 1.2
+
+[sub_resource type="BoxMesh" id="BoxMesh_ammo_trim"]
+material = SubResource("StandardMaterial3D_ammo_trim")
+size = Vector3(0.57, 0.08, 0.37)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_glow_ring_ammo"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 0.75, 0.15, 0.55)
+
+[sub_resource type="TorusMesh" id="TorusMesh_ring_ammo"]
+material = SubResource("StandardMaterial3D_glow_ring_ammo")
+inner_radius = 0.55
+outer_radius = 0.72
+
+[node name="PickupAmmo" type="Area3D" groups=["pickups"]]
+collision_layer = 0
+collision_mask = 1
+monitorable = false
+script = ExtResource("1_pickup")
+pickup_type = 1
+amount = 60.0
+respawn_time = 15.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CylinderShape3D_pickup")
+
+[node name="VisualRoot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+
+[node name="CrateBody" type="MeshInstance3D" parent="VisualRoot"]
+mesh = SubResource("BoxMesh_crate_body")
+
+[node name="AmmoTrim" type="MeshInstance3D" parent="VisualRoot"]
+mesh = SubResource("BoxMesh_ammo_trim")
+
+[node name="GlowRing" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("TorusMesh_ring_ammo")
+
+[node name="OmniLight3D" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+light_color = Color(1, 0.75, 0.2, 1)
+light_energy = 0.8
+omni_range = 3.5

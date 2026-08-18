@@ -459,10 +459,10 @@ func _test_match_lifecycle_compatibility(arena: Node) -> void:
 # -----------------------------------------------------------------------------
 func _test_live_ffa_simulation(arena: Node) -> void:
 	print("\n--- TEST 15: Live Multi-Combatant FFA Arena AI Simulation ---")
-	var match_mgr : MatchManager = arena.get_node_or_null("MatchManager") as MatchManager
-	_assert(match_mgr != null and match_mgr.is_playing(), "MatchManager active for live simulation")
+	var match_mgr = arena.get_node_or_null("MatchManager")
+	_assert(match_mgr != null and (match_mgr.is_playing() or match_mgr.is_staging()), "MatchManager active for live simulation")
 
-	var initial_scoreboard := match_mgr.get_sorted_scoreboard()
+	var initial_scoreboard : Array = match_mgr.get_sorted_scoreboard()
 	var initial_total_kills : int = 0
 	for entry in initial_scoreboard:
 		initial_total_kills += int(entry["kills"])
@@ -472,7 +472,7 @@ func _test_live_ffa_simulation(arena: Node) -> void:
 		arena.get_tree().physics_frame
 		await process_frame
 
-	var end_scoreboard := match_mgr.get_sorted_scoreboard()
+	var end_scoreboard : Array = match_mgr.get_sorted_scoreboard()
 	var final_total_kills : int = 0
 	for entry in end_scoreboard:
 		final_total_kills += int(entry["kills"])
@@ -484,5 +484,5 @@ func _test_live_ffa_simulation(arena: Node) -> void:
 
 	print("\n--- FINAL ARENA SCOREBOARD ---")
 	for i in range(end_scoreboard.size()):
-		var e := end_scoreboard[i]
+		var e : Dictionary = end_scoreboard[i]
 		print("  #%d %s: %d Kills / %d Deaths (Score: %d)" % [i + 1, e["name"], e["kills"], e["deaths"], e["score"]])

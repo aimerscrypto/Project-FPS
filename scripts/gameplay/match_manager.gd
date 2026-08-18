@@ -19,17 +19,24 @@ signal match_ended(winner: Node)
 signal kill_recorded(killer: Node, victim: Node, killer_score: int)
 signal score_updated(combatant: Node, kills: int, deaths: int)
 signal timer_updated(time_remaining: float)
+signal staging_started(duration: float)
+signal staging_tick(seconds_left: int)
+signal staging_completed()
+signal accolade_triggered(combatant: Node, type: String, title: String, points: int)
 
-enum MatchState { WAITING, PLAYING, ENDED }
+enum MatchState { WAITING, STAGING, PLAYING, ENDED }
 
 @export_group("Match Configuration")
-@export var match_length  : float = 300.0   # seconds (5:00)
-@export var kill_limit    : int   = 25      # kills required to win immediately
-@export var auto_start    : bool  = true    # whether to automatically start playing on ready
+@export var match_length     : float = 300.0   # seconds (5:00)
+@export var kill_limit       : int   = 25      # kills required to win immediately
+@export var staging_duration : float = 3.0     # seconds for pre-match 3-2-1 countdown (0.0 to skip)
+@export var auto_start       : bool  = true    # whether to automatically start playing on ready
 
 # Match Runtime State
 var state          : MatchState = MatchState.WAITING
 var time_remaining : float      = 300.0
+var _staging_timer : float      = 0.0
+var _last_staging_second : int  = -1
 
 # Combatant Scoreboard: Dictionary[Node, Dictionary]
 # Key: Combatant Node -> Value: { "name": String, "kills": int, "deaths": int, "score": int }
@@ -37,6 +44,12 @@ var _combatant_stats : Dictionary = {}
 
 # Combatant Last Death Positions: Dictionary[Node, Vector3]
 var _combatant_last_death_pos : Dictionary = {}
+
+# Accolades & Streak Tracking
+var _combatant_streaks        : Dictionary = {} # Node -> int
+var _combatant_last_kill_time : Dictionary = {} # Node -> float
+var _combatant_multikill_count: Dictionary = {} # Node -> int
+var _first_blood_awarded      : bool       = false
 
 # Timer announcement milestones to prevent console spam
 var _next_milestone_index : int = 0
@@ -54,6 +67,26 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if state == MatchState.STAGING:
+		_staging_timer -= delta
+		var sec : int = int(ceilf(_staging_timer))
+		if sec != _last_staging_second and sec > 0:
+			_last_staging_second = sec
+			staging_tick.emit(sec)
+			var audio_mgr = get_node_or_null("/root/AudioManager")
+			if audio_mgr and audio_mgr.has_method("play_staging_tick"):
+				audio_mgr.play_staging_tick()
+			print("[MATCH] Staging countdown: %d..." % sec)
+
+		if _staging_timer <= 0.0:
+			_staging_timer = 0.0
+			staging_completed.emit()
+			var audio_mgr = get_node_or_null("/root/AudioManager")
+			if audio_mgr and audio_mgr.has_method("play_staging_go"):
+				audio_mgr.play_staging_go()
+			_begin_playing()
+		return
+
 	if state != MatchState.PLAYING:
 		return
 
@@ -154,24 +187,50 @@ func is_playing() -> bool:
 	return state == MatchState.PLAYING
 
 
+## Returns true if the match is in the pre-match countdown staging period.
+func is_staging() -> bool:
+	return state == MatchState.STAGING
+
+
 ## Returns true if the match has finished.
 func is_ended() -> bool:
 	return state == MatchState.ENDED
+
+
+## Returns current kill streak of a combatant.
+func get_combatant_streak(combatant: Node) -> int:
+	return _combatant_streaks.get(combatant, 0)
 
 
 # =============================================================================
 # MATCH LIFECYCLE
 # =============================================================================
 
-## Starts the FFA match.
-func start_match() -> void:
-	if state == MatchState.PLAYING:
+## Starts the FFA match, optionally entering pre-match staging.
+func start_match(skip_staging: bool = false) -> void:
+	if state == MatchState.PLAYING or state == MatchState.STAGING:
 		return
 
+	_register_existing_combatants()
+	_combatant_streaks.clear()
+	_combatant_last_kill_time.clear()
+	_combatant_multikill_count.clear()
+	_first_blood_awarded = false
+
+	if staging_duration > 0.0 and not skip_staging:
+		state = MatchState.STAGING
+		_staging_timer = staging_duration
+		_last_staging_second = -1
+		print("[MATCH] Staging started (%.1fs)" % staging_duration)
+		staging_started.emit(staging_duration)
+	else:
+		_begin_playing()
+
+
+func _begin_playing() -> void:
 	state = MatchState.PLAYING
 	time_remaining = match_length
 	_next_milestone_index = 0
-	_register_existing_combatants()
 
 	print("[MATCH] Started")
 	match_started.emit()
@@ -227,9 +286,14 @@ func record_kill(killer: Node, victim: Node) -> void:
 	if victim and victim is Node3D:
 		_combatant_last_death_pos[victim] = (victim as Node3D).global_position
 
+	# Reset victim's active streak on death
+	if victim:
+		_combatant_streaks[victim] = 0
+		_combatant_multikill_count[victim] = 0
+
 	print("[DEATH] %s" % victim_name)
 
-	# If match has ended, do not increment scores
+	# If match has ended or is in staging, do not increment scores
 	if state != MatchState.PLAYING:
 		return
 
@@ -246,6 +310,49 @@ func record_kill(killer: Node, victim: Node) -> void:
 
 		print("[KILL] %s -> %s" % [killer_name, victim_name])
 		print("[SCORE] %s = %d" % [killer_name, current_score])
+
+		# 1. First Blood Check
+		if not _first_blood_awarded:
+			_first_blood_awarded = true
+			print("[ACCOLADE] FIRST BLOOD by %s!" % killer_name)
+			accolade_triggered.emit(killer, "first_blood", "FIRST BLOOD!", 50)
+
+		# 2. Kill Streak Check
+		var streak : int = _combatant_streaks.get(killer, 0) + 1
+		_combatant_streaks[killer] = streak
+		if streak == 3:
+			print("[ACCOLADE] KILLING SPREE by %s! (3 Kills)" % killer_name)
+			accolade_triggered.emit(killer, "streak", "KILLING SPREE!", 100)
+		elif streak == 5:
+			print("[ACCOLADE] RAMPAGE by %s! (5 Kills)" % killer_name)
+			accolade_triggered.emit(killer, "streak", "RAMPAGE!", 200)
+		elif streak == 7:
+			print("[ACCOLADE] DOMINATING by %s! (7 Kills)" % killer_name)
+			accolade_triggered.emit(killer, "streak", "DOMINATING!", 300)
+		elif streak == 10:
+			print("[ACCOLADE] UNSTOPPABLE by %s! (10 Kills)" % killer_name)
+			accolade_triggered.emit(killer, "streak", "UNSTOPPABLE!", 500)
+
+		# 3. Multi-Kill Window Check (4.0s window)
+		var cur_time : float = time_remaining
+		var last_time : float = _combatant_last_kill_time.get(killer, -999.0)
+		var dt : float = last_time - cur_time # countdown timer
+		if dt >= 0.0 and dt <= 4.0:
+			var mk : int = _combatant_multikill_count.get(killer, 1) + 1
+			_combatant_multikill_count[killer] = mk
+			if mk == 2:
+				print("[ACCOLADE] DOUBLE KILL by %s!" % killer_name)
+				accolade_triggered.emit(killer, "multikill", "DOUBLE KILL!", 50)
+			elif mk == 3:
+				print("[ACCOLADE] TRIPLE KILL by %s!" % killer_name)
+				accolade_triggered.emit(killer, "multikill", "TRIPLE KILL!", 100)
+			elif mk >= 4:
+				print("[ACCOLADE] MULTI KILL by %s!" % killer_name)
+				accolade_triggered.emit(killer, "multikill", "MULTI KILL!", 150)
+		else:
+			_combatant_multikill_count[killer] = 1
+
+		_combatant_last_kill_time[killer] = cur_time
 
 		score_updated.emit(killer, _combatant_stats[killer]["kills"], _combatant_stats[killer]["deaths"])
 		kill_recorded.emit(killer, victim, current_score)

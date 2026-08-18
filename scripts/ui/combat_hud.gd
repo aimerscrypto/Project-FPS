@@ -46,6 +46,28 @@ class_name CombatHUD
 @onready var _rows_container    : VBoxContainer  = $ResultsOverlay/CenterBox/ScoreboardContainer/RowsContainer
 @onready var _play_again_btn    : Button         = $ResultsOverlay/CenterBox/PlayAgainButton
 
+# Staging & Accolade Overlays
+@onready var _staging_overlay   : Control        = get_node_or_null("StagingOverlay")
+@onready var _staging_label     : Label          = get_node_or_null("StagingOverlay/StagingLabel")
+@onready var _accolade_overlay  : Control        = get_node_or_null("AccoladeOverlay")
+@onready var _accolade_title    : Label          = get_node_or_null("AccoladeOverlay/AccoladeBox/AccoladeTitle")
+@onready var _accolade_points   : Label          = get_node_or_null("AccoladeOverlay/AccoladeBox/AccoladePoints")
+
+# Tab Live Scoreboard
+@onready var _tab_scoreboard    : Control        = get_node_or_null("TabScoreboard")
+@onready var _tab_rows_container: VBoxContainer  = get_node_or_null("TabScoreboard/TabBox/TabRowsContainer")
+
+# Pause Menu
+@onready var _pause_menu        : Control        = get_node_or_null("PauseMenu")
+@onready var _resume_btn        : Button         = get_node_or_null("PauseMenu/CenterBox/ResumeButton")
+@onready var _sens_slider       : HSlider        = get_node_or_null("PauseMenu/CenterBox/SensBox/SensSlider")
+@onready var _sens_val_lbl      : Label          = get_node_or_null("PauseMenu/CenterBox/SensBox/SensHeader/SensValue")
+@onready var _master_slider     : HSlider        = get_node_or_null("PauseMenu/CenterBox/MasterVolBox/MasterSlider")
+@onready var _master_val_lbl    : Label          = get_node_or_null("PauseMenu/CenterBox/MasterVolBox/VolHeader/VolValue")
+@onready var _sfx_slider        : HSlider        = get_node_or_null("PauseMenu/CenterBox/SfxVolBox/SfxSlider")
+@onready var _sfx_val_lbl       : Label          = get_node_or_null("PauseMenu/CenterBox/SfxVolBox/SfxHeader/SfxValue")
+@onready var _restart_btn       : Button         = get_node_or_null("PauseMenu/CenterBox/RestartButton")
+
 # -----------------------------------------------------------------------------
 # CONSTANTS & CONFIGURATION
 # -----------------------------------------------------------------------------
@@ -58,10 +80,12 @@ const NUM_DIR_INDICATORS   : int   = 8
 var _vignette_tween        : Tween        = null
 var _low_hp_tween          : Tween        = null
 var _trail_tween           : Tween        = null
+var _accolade_tween        : Tween        = null
 var _is_low_health_pulsing : bool         = false
 var _respawn_time_left     : float        = 0.0
 var _is_dead               : bool         = false
 var _is_results_shown      : bool         = false
+var _is_paused             : bool         = false
 var _match_mgr             : MatchManager = null
 var _player_node           : Node         = null
 var _player_score          : int          = 0
@@ -76,6 +100,8 @@ var _dir_indicator_index   : int            = 0
 # INITIALIZATION & SETUP
 # =============================================================================
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+
 	if _damage_flash:
 		_damage_flash.color = Color(1.0, 0.0, 0.0, 0.0)
 		_damage_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -90,11 +116,31 @@ func _ready() -> void:
 		_death_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if _results_overlay:
 		_results_overlay.visible = false
+	if _staging_overlay:
+		_staging_overlay.visible = false
+	if _accolade_overlay:
+		_accolade_overlay.visible = false
+	if _tab_scoreboard:
+		_tab_scoreboard.visible = false
+	if _pause_menu:
+		_pause_menu.visible = false
 
 	_init_directional_indicators()
 
 	if _play_again_btn:
 		_play_again_btn.pressed.connect(restart_match)
+
+	# Pause Menu button and slider connections
+	if _resume_btn:
+		_resume_btn.pressed.connect(toggle_pause_menu)
+	if _restart_btn:
+		_restart_btn.pressed.connect(restart_match)
+	if _sens_slider:
+		_sens_slider.value_changed.connect(_on_sens_slider_changed)
+	if _master_slider:
+		_master_slider.value_changed.connect(_on_master_slider_changed)
+	if _sfx_slider:
+		_sfx_slider.value_changed.connect(_on_sfx_slider_changed)
 
 	update_health(100.0, 100.0)
 	update_ammo(30, 120)
@@ -139,12 +185,13 @@ func _init_directional_indicators() -> void:
 
 ## Connects the HUD to the MatchManager and identifies the local player node.
 func setup_match_manager(match_mgr: MatchManager, player: Node) -> void:
+	if player != null:
+		_player_node = player
+
 	if match_mgr == null:
 		return
 
 	_match_mgr = match_mgr
-	if player != null:
-		_player_node = player
 
 	# Connect signals safely without duplicating connections
 	if not _match_mgr.timer_updated.is_connected(_on_timer_updated):
@@ -155,6 +202,16 @@ func setup_match_manager(match_mgr: MatchManager, player: Node) -> void:
 		_match_mgr.kill_recorded.connect(_on_kill_recorded)
 	if not _match_mgr.match_ended.is_connected(_on_match_ended):
 		_match_mgr.match_ended.connect(_on_match_ended)
+
+	# Staging & Accolades
+	if _match_mgr.has_signal("staging_started") and not _match_mgr.staging_started.is_connected(_on_staging_started):
+		_match_mgr.staging_started.connect(_on_staging_started)
+	if _match_mgr.has_signal("staging_tick") and not _match_mgr.staging_tick.is_connected(_on_staging_tick):
+		_match_mgr.staging_tick.connect(_on_staging_tick)
+	if _match_mgr.has_signal("staging_completed") and not _match_mgr.staging_completed.is_connected(_on_staging_completed):
+		_match_mgr.staging_completed.connect(_on_staging_completed)
+	if _match_mgr.has_signal("accolade_triggered") and not _match_mgr.accolade_triggered.is_connected(_on_accolade_triggered):
+		_match_mgr.accolade_triggered.connect(_on_accolade_triggered)
 
 	# Initial values
 	_leader_score = _match_mgr.get_leading_score()
@@ -173,6 +230,17 @@ func _process(delta: float) -> void:
 		_respawn_time_left -= delta
 		if _respawn_timer_lbl:
 			_respawn_timer_lbl.text = "Respawning in %.1fs..." % max(_respawn_time_left, 0.0)
+
+	# In-match TAB Live Scoreboard
+	if _tab_scoreboard:
+		var show_tab : bool = (Input.is_action_pressed("show_scoreboard") or Input.is_key_pressed(KEY_TAB)) and not _is_results_shown and not _is_paused
+		if show_tab:
+			if not _tab_scoreboard.visible:
+				_tab_scoreboard.visible = true
+			_populate_tab_scoreboard()
+		else:
+			if _tab_scoreboard.visible:
+				_tab_scoreboard.visible = false
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -578,8 +646,9 @@ func _populate_scoreboard() -> void:
 	if _rows_container == null or not is_instance_valid(_rows_container):
 		return
 
-	# Clear previous rows
+	# Clear previous rows immediately
 	for child in _rows_container.get_children():
+		_rows_container.remove_child(child)
 		child.queue_free()
 
 	if _match_mgr == null:
@@ -648,6 +717,239 @@ func _populate_scoreboard() -> void:
 			score_lbl.modulate = Color(0.85, 0.85, 0.9, 1.0)
 
 		_rows_container.add_child(row)
+
+
+# =============================================================================
+# LIVE TAB SCOREBOARD
+# =============================================================================
+
+func _populate_tab_scoreboard() -> void:
+	if _tab_rows_container == null or not is_instance_valid(_tab_rows_container):
+		return
+
+	for child in _tab_rows_container.get_children():
+		_tab_rows_container.remove_child(child)
+		child.queue_free()
+
+	if _match_mgr == null:
+		return
+
+	var sorted_stats := _match_mgr.get_sorted_scoreboard()
+
+	for i in range(sorted_stats.size()):
+		var entry : Dictionary = sorted_stats[i]
+		var is_player_row : bool = (entry.get("node") == _player_node) or (entry.get("name") == "Player")
+
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+
+		var rank_lbl := Label.new()
+		rank_lbl.custom_minimum_size = Vector2(50, 0)
+		rank_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		rank_lbl.text = str(i + 1)
+		rank_lbl.add_theme_font_size_override("font_size", 14)
+		row.add_child(rank_lbl)
+
+		var name_lbl := Label.new()
+		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_lbl.text = entry.get("name", "Unknown") + (" (YOU)" if is_player_row else "")
+		name_lbl.add_theme_font_size_override("font_size", 14)
+		row.add_child(name_lbl)
+
+		var kills_lbl := Label.new()
+		kills_lbl.custom_minimum_size = Vector2(65, 0)
+		kills_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		kills_lbl.text = str(entry.get("kills", 0))
+		kills_lbl.add_theme_font_size_override("font_size", 14)
+		row.add_child(kills_lbl)
+
+		var deaths_lbl := Label.new()
+		deaths_lbl.custom_minimum_size = Vector2(65, 0)
+		deaths_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		deaths_lbl.text = str(entry.get("deaths", 0))
+		deaths_lbl.add_theme_font_size_override("font_size", 14)
+		row.add_child(deaths_lbl)
+
+		var score_lbl := Label.new()
+		score_lbl.custom_minimum_size = Vector2(65, 0)
+		score_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		score_lbl.text = str(entry.get("score", 0))
+		score_lbl.add_theme_font_size_override("font_size", 14)
+		row.add_child(score_lbl)
+
+		if is_player_row:
+			rank_lbl.modulate = Color(0.3, 0.9, 1.0, 1.0)
+			name_lbl.modulate = Color(0.3, 0.9, 1.0, 1.0)
+			kills_lbl.modulate = Color(0.3, 0.9, 1.0, 1.0)
+			deaths_lbl.modulate = Color(0.3, 0.9, 1.0, 1.0)
+			score_lbl.modulate = Color(0.3, 0.9, 1.0, 1.0)
+		else:
+			rank_lbl.modulate = Color(0.85, 0.85, 0.9, 1.0)
+			name_lbl.modulate = Color(0.85, 0.85, 0.9, 1.0)
+			kills_lbl.modulate = Color(0.85, 0.85, 0.9, 1.0)
+			deaths_lbl.modulate = Color(0.85, 0.85, 0.9, 1.0)
+			score_lbl.modulate = Color(0.85, 0.85, 0.9, 1.0)
+
+		_tab_rows_container.add_child(row)
+
+
+# =============================================================================
+# PRE-MATCH STAGING PRESENTATION
+# =============================================================================
+
+func _on_staging_started(duration: float) -> void:
+	if _staging_overlay:
+		_staging_overlay.visible = true
+		_staging_overlay.modulate.a = 1.0
+	show_staging_tick(int(ceilf(duration)))
+
+
+func _on_staging_tick(seconds_left: int) -> void:
+	show_staging_tick(seconds_left)
+
+
+func _on_staging_completed() -> void:
+	show_staging_go()
+
+
+func show_staging_tick(sec: int) -> void:
+	if _staging_label and is_instance_valid(_staging_label):
+		_staging_label.text = str(sec)
+		_staging_label.modulate = Color(1.0, 0.85, 0.2, 1.0)
+		if is_inside_tree() and _staging_overlay:
+			_staging_overlay.visible = true
+			_staging_overlay.modulate.a = 1.0
+			_staging_overlay.scale = Vector2(1.3, 1.3)
+			var tween := create_tween()
+			if tween:
+				tween.tween_property(_staging_overlay, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func show_staging_go() -> void:
+	if _staging_label and is_instance_valid(_staging_label):
+		_staging_label.text = "FIGHT!"
+		_staging_label.modulate = Color(0.2, 0.95, 0.4, 1.0)
+		if is_inside_tree() and _staging_overlay:
+			_staging_overlay.visible = true
+			_staging_overlay.modulate.a = 1.0
+			_staging_overlay.scale = Vector2(1.4, 1.4)
+			var tween := create_tween()
+			if tween:
+				tween.tween_property(_staging_overlay, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+				tween.tween_interval(0.6)
+				tween.tween_property(_staging_overlay, "modulate:a", 0.0, 0.3)
+				tween.tween_callback(func():
+					if is_instance_valid(_staging_overlay):
+						_staging_overlay.visible = false
+						_staging_overlay.modulate.a = 1.0
+				)
+
+
+# =============================================================================
+# ACCOLADES PRESENTATION
+# =============================================================================
+
+func _on_accolade_triggered(combatant: Node, type: String, title: String, points: int) -> void:
+	# Show accolade banner for local player
+	var is_local : bool = (combatant == _player_node) or (combatant != null and combatant.name == "Player") or (_player_node == null)
+	if is_local:
+		show_accolade(title, points, type == "multikill")
+
+
+## Triggers a punchy animated accolade banner.
+func show_accolade(title: String, points: int, is_multikill: bool = false) -> void:
+	if _accolade_overlay == null or not is_instance_valid(_accolade_overlay):
+		return
+
+	if _accolade_title:
+		_accolade_title.text = title
+		if is_multikill:
+			_accolade_title.modulate = Color(1.0, 0.3, 0.2, 1.0) # Vivid Crimson/Orange
+		else:
+			_accolade_title.modulate = Color(1.0, 0.85, 0.2, 1.0) # Gold
+
+	if _accolade_points:
+		_accolade_points.text = "+%d PTS" % points
+
+	var audio_mgr = get_node_or_null("/root/AudioManager")
+	if audio_mgr and audio_mgr.has_method("play_accolade"):
+		audio_mgr.play_accolade(is_multikill)
+
+	_accolade_overlay.visible = true
+	_accolade_overlay.modulate.a = 1.0
+	_accolade_overlay.scale = Vector2(1.35, 1.35)
+
+	if _accolade_tween and _accolade_tween.is_valid():
+		_accolade_tween.kill()
+
+	if is_inside_tree():
+		_accolade_tween = create_tween()
+		_accolade_tween.tween_property(_accolade_overlay, "scale", Vector2.ONE, 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_accolade_tween.tween_interval(1.4)
+		_accolade_tween.tween_property(_accolade_overlay, "modulate:a", 0.0, 0.35)
+		_accolade_tween.tween_callback(func():
+			if is_instance_valid(_accolade_overlay):
+				_accolade_overlay.visible = false
+		)
+
+
+# =============================================================================
+# IN-GAME PAUSE & SETTINGS MENU
+# =============================================================================
+
+## Toggles the in-game Pause Menu.
+func toggle_pause_menu() -> void:
+	if _is_results_shown:
+		return
+
+	_is_paused = not _is_paused
+
+	if _pause_menu and is_instance_valid(_pause_menu):
+		_pause_menu.visible = _is_paused
+
+	if _is_paused:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		var audio_mgr = get_node_or_null("/root/AudioManager")
+		if audio_mgr and audio_mgr.has_method("play_ui_pause"):
+			audio_mgr.play_ui_pause()
+
+		# Sync current sensitivity to slider
+		if _player_node and _player_node.has_method("get_mouse_sensitivity"):
+			var sens : float = _player_node.get_mouse_sensitivity()
+			if _sens_slider: _sens_slider.value = sens
+			if _sens_val_lbl: _sens_val_lbl.text = "%.4f" % sens
+	else:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		var audio_mgr = get_node_or_null("/root/AudioManager")
+		if audio_mgr and audio_mgr.has_method("play_ui_click"):
+			audio_mgr.play_ui_click()
+
+
+func is_paused() -> bool:
+	return _is_paused
+
+
+func _on_sens_slider_changed(val: float) -> void:
+	if _sens_val_lbl:
+		_sens_val_lbl.text = "%.4f" % val
+	if _player_node and _player_node.has_method("set_mouse_sensitivity"):
+		_player_node.set_mouse_sensitivity(val)
+
+
+func _on_master_slider_changed(val: float) -> void:
+	if _master_val_lbl:
+		_master_val_lbl.text = "%d%%" % int(val * 100.0)
+	var bus_idx := AudioServer.get_bus_index("Master")
+	if bus_idx != -1:
+		AudioServer.set_bus_volume_db(bus_idx, linear_to_db(val) if val > 0.001 else -80.0)
+
+
+func _on_sfx_slider_changed(val: float) -> void:
+	if _sfx_val_lbl:
+		_sfx_val_lbl.text = "%d%%" % int(val * 100.0)
+	var bus_idx := AudioServer.get_bus_index("SFX")
+	if bus_idx != -1:
+		AudioServer.set_bus_volume_db(bus_idx, linear_to_db(val) if val > 0.001 else -80.0)
 
 
 # =============================================================================

@@ -32,7 +32,7 @@ const JUMP_VELOCITY     : float = 7.5    # upward velocity applied on jump
 const GRAVITY           : float = 20.0   # m/s² downward pull
 
 # Mouse look
-const MOUSE_SENSITIVITY : float = 0.002  # radians per pixel — tune to taste
+@export var mouse_sensitivity   : float = 0.002  # radians per pixel — tune to taste
 const CAMERA_PITCH_MIN  : float = -88.0  # degrees — max look down
 const CAMERA_PITCH_MAX  : float = 88.0   # degrees — max look up
 
@@ -59,13 +59,15 @@ const HEIGHT_LERP_SPEED : float = 12.0   # how fast the capsule shrinks/grows
 @onready var _combat_hud   : CanvasLayer     = $CombatHUD
 @onready var _crosshair_hud : CanvasLayer     = find_child("CrosshairHUD", true, false)
 
-# Weapon references & inventory slots (Slot 0 = Assault Rifle, Slot 1 = Pistol)
+# Weapon references & inventory slots (Slot 0 = Assault Rifle, Slot 1 = SMG, Slot 2 = Pistol)
 @onready var _weapon_primary   : Node3D = find_child("AssaultRifle", true, false)
+@onready var _weapon_smg       : Node3D = find_child("SMG", true, false)
 @onready var _weapon_secondary : Node3D = find_child("Pistol", true, false)
 
 var _weapons           : Array[Node3D] = []
 var _active_slot_index : int           = 0
 var _active_weapon     : Node3D        = null
+var _match_mgr         : MatchManager  = null
 
 
 # -----------------------------------------------------------------------------
@@ -142,10 +144,12 @@ func _ready() -> void:
 		_health.spawn_protection_started.connect(_on_spawn_protection_started)
 		_health.spawn_protection_ended.connect(_on_spawn_protection_ended)
 
-	# Register weapons in inventory slots
+	# Register weapons in inventory slots (Slot 0 = AR, Slot 1 = SMG, Slot 2 = Pistol)
 	_weapons.clear()
 	if is_instance_valid(_weapon_primary):
 		_weapons.append(_weapon_primary)
+	if is_instance_valid(_weapon_smg):
+		_weapons.append(_weapon_smg)
 	if is_instance_valid(_weapon_secondary):
 		_weapons.append(_weapon_secondary)
 
@@ -159,7 +163,7 @@ func _ready() -> void:
 		if w.has_signal("target_hit"):
 			w.target_hit.connect(_on_target_hit)
 
-	# Initialize primary weapon (Slot 0) as equipped, unequip secondary
+	# Initialize primary weapon (Slot 0) as equipped, unequip others
 	_active_slot_index = 0
 	if _weapons.size() > 0:
 		_active_weapon = _weapons[0]
@@ -181,7 +185,13 @@ func _ready() -> void:
 	var tree := get_tree()
 	if tree:
 		var match_mgr = tree.get_first_node_in_group("match_manager")
-		if match_mgr:
+		if match_mgr is MatchManager:
+			_match_mgr = match_mgr
+			if not _match_mgr.match_ended.is_connected(_on_match_ended):
+				_match_mgr.match_ended.connect(_on_match_ended)
+			if _combat_hud and _combat_hud.has_method("setup_match_manager"):
+				_combat_hud.setup_match_manager(_match_mgr, self)
+		elif match_mgr:
 			if match_mgr.has_signal("match_ended"):
 				match_mgr.match_ended.connect(_on_match_ended)
 			if _combat_hud and _combat_hud.has_method("setup_match_manager"):
@@ -447,6 +457,16 @@ func switch_weapon(slot_index: int) -> void:
 			_active_weapon.set_aiming(_is_aiming)
 
 
+## Sets the base mouse sensitivity.
+func set_mouse_sensitivity(val: float) -> void:
+	mouse_sensitivity = clampf(val, 0.0002, 0.0100)
+
+
+## Returns the base mouse sensitivity.
+func get_mouse_sensitivity() -> float:
+	return mouse_sensitivity
+
+
 # =============================================================================
 # INPUT — collect mouse delta here; handle per-frame in _physics_process
 # =============================================================================
@@ -460,16 +480,19 @@ func _input(event: InputEvent) -> void:
 			if is_instance_valid(w) and w.has_method("refill_ammo"):
 				w.refill_ammo()
 
-	# Mouse look accumulation (only when alive)
+	# Mouse look accumulation (only when alive and captured)
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not _is_dead:
 		_mouse_delta += event.relative
 
-	# Toggle mouse capture with Escape
+	# In-match Pause Menu toggle or mouse capture toggle with Escape
 	if event.is_action_pressed("ui_cancel"):
-		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		if _combat_hud and _combat_hud.has_method("toggle_pause_menu"):
+			_combat_hud.toggle_pause_menu()
 		else:
-			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+				Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+			else:
+				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
 # =============================================================================
@@ -479,11 +502,17 @@ func _process(delta: float) -> void:
 	if _is_dead or _is_match_ended:
 		return
 
+	# Pre-match staging lock: suppress weapon inputs during 3-2-1 countdown
+	if _match_mgr != null and _match_mgr.is_staging():
+		return
+
 	# Weapon slot switching inputs
 	if Input.is_action_just_pressed("weapon_slot_1"):
 		switch_weapon(0)
 	elif Input.is_action_just_pressed("weapon_slot_2"):
 		switch_weapon(1)
+	elif Input.is_action_just_pressed("weapon_slot_3"):
+		switch_weapon(2)
 	elif Input.is_action_just_pressed("weapon_next"):
 		if _weapons.size() > 1:
 			switch_weapon((_active_slot_index + 1) % _weapons.size())
@@ -491,8 +520,10 @@ func _process(delta: float) -> void:
 		if _weapons.size() > 1:
 			switch_weapon((_active_slot_index - 1 + _weapons.size()) % _weapons.size())
 
-	# ADS input (hold RMB)
-	var wants_aim : bool = Input.is_action_pressed("aim") or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	# ADS input (hold RMB) - only if mouse is captured
+	var wants_aim : bool = false
+	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		wants_aim = Input.is_action_pressed("aim") or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
 	_is_aiming = wants_aim
 	_ads_weight = lerpf(_ads_weight, 1.0 if _is_aiming else 0.0, ADS_LERP_SPEED * delta)
 
@@ -506,15 +537,16 @@ func _process(delta: float) -> void:
 	if _active_weapon.has_method("set_aiming"):
 		_active_weapon.set_aiming(_is_aiming)
 
-	# Fire input: automatic vs semi-automatic
-	var is_auto : bool = _active_weapon.is_automatic() if _active_weapon.has_method("is_automatic") else true
-	var wants_fire : bool = Input.is_action_pressed("fire_primary") if is_auto else Input.is_action_just_pressed("fire_primary")
-	if wants_fire:
-		_active_weapon.try_fire()
+	# Fire input: automatic vs semi-automatic (only while mouse is captured)
+	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		var is_auto : bool = _active_weapon.is_automatic() if _active_weapon.has_method("is_automatic") else true
+		var wants_fire : bool = Input.is_action_pressed("fire_primary") if is_auto else Input.is_action_just_pressed("fire_primary")
+		if wants_fire:
+			_active_weapon.try_fire()
 
-	# Reload input
-	if Input.is_action_just_pressed("reload"):
-		_active_weapon.try_reload()
+		# Reload input
+		if Input.is_action_just_pressed("reload"):
+			_active_weapon.try_reload()
 
 
 # =============================================================================
@@ -522,6 +554,12 @@ func _process(delta: float) -> void:
 # =============================================================================
 func _physics_process(delta: float) -> void:
 	if _is_dead:
+		return
+
+	# Pre-match staging lock: freeze movement at spawn
+	if _match_mgr != null and _match_mgr.is_staging():
+		velocity = Vector3.ZERO
+		move_and_slide()
 		return
 
 	if _is_match_ended:
@@ -552,7 +590,7 @@ func _physics_process(delta: float) -> void:
 # =============================================================================
 func _handle_mouse_look(delta: float) -> void:
 	# Sensitivity scaling during ADS
-	var current_sens : float = MOUSE_SENSITIVITY * lerpf(1.0, ADS_SENS_MULT, _ads_weight)
+	var current_sens : float = mouse_sensitivity * lerpf(1.0, ADS_SENS_MULT, _ads_weight)
 
 	# 1. Horizontal mouse look (yaw) — rotate the body, absorbing horizontal recoil if counter-steering
 	if _mouse_delta.x != 0.0:

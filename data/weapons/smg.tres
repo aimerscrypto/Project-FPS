@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+weapon_name = "SMG"
+damage = 18.0
+headshot_multiplier = 1.75
+fire_rate = 15.0
+is_automatic = true
+magazine_size = 35
+reserve_ammo = 140
+reload_time = 1.5
+spread_degrees = 0.9
+range_meters = 60.0
+recoil_vertical = 0.70
+recoil_horizontal = 0.45
+recoil_recovery = 5.5
+fire_sound = "smg_fire"
+dryfire_sound = "ar_dryfire"
+reload_sound = "ar_reload"
+casing_type = "pistol"
+reload_profile = "pistol"
