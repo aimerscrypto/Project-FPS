@@ -48,7 +48,6 @@ var _camera : Camera3D        = null
 
 # -----------------------------------------------------------------------------
 # WEAPON STATE
-# -----------------------------------------------------------------------------
 enum WeaponState { READY, FIRING, RELOADING }
 
 var _state           : WeaponState = WeaponState.READY
@@ -56,6 +55,8 @@ var _current_ammo    : int         = 0
 var _reserve_ammo    : int         = 0
 var _fire_timer      : float       = 0.0   # countdown to next allowed shot
 var _reload_timer    : float       = 0.0   # countdown to reload completion
+var _equip_timer     : float       = 0.0   # equip lock countdown
+const EQUIP_DURATION : float       = 0.20  # seconds to ready weapon upon equip
 
 # Muzzle flash visibility & tuning
 var _muzzle_timer    : float       = 0.0
@@ -224,8 +225,11 @@ func set_camera(cam: Camera3D) -> void:
 # PROCESS
 # =============================================================================
 func _process(delta: float) -> void:
-	if data == null:
+	if data == null or not visible:
 		return
+
+	if _equip_timer > 0.0:
+		_equip_timer = maxf(_equip_timer - delta, 0.0)
 
 	# Fallback/standalone ADS state update if not driven by player
 	if _player == null or not _player.has_method("is_aiming"):
@@ -244,6 +248,56 @@ func _process(delta: float) -> void:
 # PUBLIC API — called by the player controller
 # =============================================================================
 
+## Equips this weapon, enabling presentation, processing, and broadcasting current ammo.
+func equip() -> void:
+	visible = true
+	set_process(true)
+	_equip_timer = EQUIP_DURATION
+	_has_last_cam_rot = false
+	_current_kick_pos = Vector3.ZERO
+	_current_kick_rot = Vector3.ZERO
+	_vibration_trauma = 0.0
+	_vibration_timer = 0.0
+	if is_instance_valid(_muzzle_flash):
+		_muzzle_flash.visible = false
+	ammo_changed.emit(_current_ammo, _reserve_ammo)
+
+
+## Unequips this weapon, disabling background processing and resetting transient visual offsets.
+func unequip() -> void:
+	# Safely cancel active reload without altering weapon's current or reserve ammo
+	if _state == WeaponState.RELOADING:
+		_state = WeaponState.READY
+		_reload_timer = 0.0
+		_current_reload_pos = Vector3.ZERO
+		_current_reload_rot = Vector3.ZERO
+	elif _state == WeaponState.FIRING:
+		_state = WeaponState.READY
+		_fire_timer = 0.0
+
+	_is_aiming = false
+	_ads_weight = 0.0
+	_equip_timer = 0.0
+	_has_last_cam_rot = false
+	_current_kick_pos = Vector3.ZERO
+	_current_kick_rot = Vector3.ZERO
+	_vibration_trauma = 0.0
+	if is_instance_valid(_muzzle_flash):
+		_muzzle_flash.visible = false
+	visible = false
+	set_process(false)
+
+
+## Returns true if the weapon is currently undergoing its equip transition.
+func is_equipping() -> bool:
+	return _equip_timer > 0.0
+
+
+## Returns true if the weapon fires automatically when trigger is held.
+func is_automatic() -> bool:
+	return data.is_automatic if data != null else true
+
+
 ## Sets ADS aim state from player input.
 func set_aiming(aiming: bool) -> void:
 	_is_aiming = aiming
@@ -259,10 +313,9 @@ func get_ads_weight() -> float:
 	return _ads_weight
 
 
-## Attempt to fire. Called every frame while fire input is held (automatic).
-## For semi-auto, call only on just_pressed.
+## Attempt to fire. Called while fire input is active.
 func try_fire() -> void:
-	if data == null:
+	if data == null or not visible or is_equipping():
 		return
 	if _state == WeaponState.RELOADING:
 		return
@@ -281,7 +334,7 @@ func try_fire() -> void:
 
 ## Attempt to reload. Called when reload input is pressed.
 func try_reload() -> void:
-	if data == null:
+	if data == null or not visible or is_equipping():
 		return
 	if _state == WeaponState.RELOADING:
 		return

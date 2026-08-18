@@ -1,7 +1,7 @@
 # Project FPS — Development Status
 
 **Last Updated:** 2026-08-18  
-**Current Milestone:** Milestone 8 — Complete FFA Match Loop & Match HUD (IMPLEMENTATION COMPLETE — PENDING MANUAL PLAYTEST)
+**Current Milestone:** Milestone 9 — Multiple Weapons / Weapon Switching (IMPLEMENTATION COMPLETE — PENDING MANUAL PLAYTEST)
 
 ---
 
@@ -50,7 +50,7 @@
     - High-detail Assault Rifle model (`fps gun.fbx` / `fps_weapon_animated.glb`) with calibrated transforms and materials.
     - Production 3D character model (`player.glb`) integrated into `BasicBot` visuals.
   - **Automated Verification:** 21/21 tests in `test_weapon_restoration.gd`, 21/21 tests in `test_milestone6_map.gd`, and 32/32 tests in `test_ffa_foundation.gd` all passing.
-- **Milestone 8 (Complete FFA Match Loop & Match HUD):** IMPLEMENTATION COMPLETE (Pending Manual Playtest):
+- **Milestone 8 (Complete FFA Match Loop & Match HUD):** COMPLETE & RUNTIME VERIFIED (Git commit `bba2072`):
   - **Match Information HUD (`CombatHUD`):**
     - Top-center Match Timer countdown formatted as `MM:SS` with low-time warning tint ($\le$ 30s).
     - Top-center Live Score Tracker displaying `YOU <PlayerScore>    LEADER <LeaderScore>`.
@@ -71,6 +71,21 @@
   - **Instant Match Restart (`PlayAgainButton` / Keybindings):**
     - "PLAY AGAIN" button and `[SPACE]` / `[ENTER]` keybindings cleanly reload the arena scene.
     - Scene reload completely resets MatchManager state, combatant stats, player/bot health, timers, and restores mouse capture (`Input.MOUSE_MODE_CAPTURED`).
+- **Milestone 9 (Multiple Weapons / Weapon Switching):** IMPLEMENTATION COMPLETE (Pending Manual Playtest):
+  - **WeaponBase Lifecycle & Equip Lock:**
+    - Added `equip()`, `unequip()`, `is_equipping()`, `is_automatic()`, and a ~0.20s equip lock before firing/reloading.
+    - Unequipping safely cancels active reloads without altering weapon's current or reserve ammo.
+    - Inactive weapons disable per-frame processing (`set_process(false)`) and remain invisible.
+  - **Semi-Automatic Trigger Support:**
+    - Fully distinguishes between automatic weapons (hold fire) and semi-automatic weapons (fresh click per shot) driven by `WeaponData.is_automatic`.
+  - **Secondary Weapon (Pistol):**
+    - Created `data/weapons/pistol.tres` (35 dmg, 2.0x headshot, 5 rps, semi-auto, 12 mag / 48 reserve, 1.4s reload, 0.8° spread, 75m range).
+    - Created `scenes/weapons/pistol.tscn` inheriting `weapon_base.tscn` with a clean placeholder visual.
+  - **Player Inventory & Switching:**
+    - Slot 1 (`AssaultRifle`) and Slot 2 (`Pistol`) selectable via Keys `1` / `2` and mouse wheel scrolling.
+    - Active weapon ownership cleanly delegates fire, reload, ADS, and motion processing exclusively to the equipped weapon.
+    - Switching immediately updates `CombatHUD` ammo counter via the `ammo_changed` signal.
+    - `F3` debug refill restores magazine and reserve ammo for all inventory weapons simultaneously.
 
 ---
 

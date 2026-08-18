@@ -58,9 +58,13 @@ const HEIGHT_LERP_SPEED : float = 12.0   # how fast the capsule shrinks/grows
 @onready var _health       : Health          = $Health
 @onready var _combat_hud   : CanvasLayer     = $CombatHUD
 
-# Weapon reference — resolved at runtime so PlayerController is not tightly
-# coupled to a specific weapon type.
-@onready var _weapon : Node3D = $CameraMount/Camera3D/AssaultRifle
+# Weapon references & inventory slots (Slot 0 = Assault Rifle, Slot 1 = Pistol)
+@onready var _weapon_primary   : Node3D = find_child("AssaultRifle", true, false)
+@onready var _weapon_secondary : Node3D = find_child("Pistol", true, false)
+
+var _weapons           : Array[Node3D] = []
+var _active_slot_index : int           = 0
+var _active_weapon     : Node3D        = null
 
 
 # -----------------------------------------------------------------------------
@@ -134,14 +138,39 @@ func _ready() -> void:
 		_health.damage_received.connect(_on_damage_received)
 		_health.died.connect(_on_died)
 		_health.respawned.connect(_on_respawned)
-	# Give the weapon references so recoil and camera are linked.
-	if _weapon:
-		if _weapon.has_method("set_player"):
-			_weapon.set_player(self)
-		if _weapon.has_method("set_camera"):
-			_weapon.set_camera(_camera)
-		if _weapon.has_signal("ammo_changed"):
-			_weapon.ammo_changed.connect(_on_weapon_ammo_changed)
+
+	# Register weapons in inventory slots
+	_weapons.clear()
+	if is_instance_valid(_weapon_primary):
+		_weapons.append(_weapon_primary)
+	if is_instance_valid(_weapon_secondary):
+		_weapons.append(_weapon_secondary)
+
+	for w in _weapons:
+		if w.has_method("set_player"):
+			w.set_player(self)
+		if w.has_method("set_camera"):
+			w.set_camera(_camera)
+		if w.has_signal("ammo_changed"):
+			w.ammo_changed.connect(_on_weapon_ammo_changed.bind(w))
+
+	# Initialize primary weapon (Slot 0) as equipped, unequip secondary
+	_active_slot_index = 0
+	if _weapons.size() > 0:
+		_active_weapon = _weapons[0]
+		for i in range(_weapons.size()):
+			if i == _active_slot_index:
+				if _weapons[i].has_method("equip"):
+					_weapons[i].equip()
+				else:
+					_weapons[i].visible = true
+					_weapons[i].set_process(true)
+			else:
+				if _weapons[i].has_method("unequip"):
+					_weapons[i].unequip()
+				else:
+					_weapons[i].visible = false
+					_weapons[i].set_process(false)
 
 	# Connect MatchManager signals & initialize CombatHUD
 	var tree := get_tree()
@@ -154,8 +183,8 @@ func _ready() -> void:
 				_combat_hud.setup_match_manager(match_mgr, self)
 
 	# Initial ammo push to HUD
-	if _weapon and _weapon.has_method("get_ammo_info") and _combat_hud and _combat_hud.has_method("update_ammo"):
-		var ammo_info : Dictionary = _weapon.get_ammo_info()
+	if is_instance_valid(_active_weapon) and _active_weapon.has_method("get_ammo_info") and _combat_hud and _combat_hud.has_method("update_ammo"):
+		var ammo_info : Dictionary = _active_weapon.get_ammo_info()
 		_combat_hud.update_ammo(ammo_info.get("current", 30), ammo_info.get("reserve", 120))
 
 	# Ensure refill_ammo action is mapped to F3 as fallback
@@ -284,7 +313,10 @@ func _do_respawn() -> void:
 		_health.respawn()
 
 
-func _on_weapon_ammo_changed(current: int, reserve: int) -> void:
+func _on_weapon_ammo_changed(current: int, reserve: int, weapon_source: Node = null) -> void:
+	# Only forward ammo updates for the currently active weapon
+	if weapon_source != null and weapon_source != _active_weapon:
+		return
 	if _combat_hud and _combat_hud.has_method("update_ammo"):
 		_combat_hud.update_ammo(current, reserve)
 
@@ -329,6 +361,9 @@ func _on_respawned() -> void:
 	_camera.rotation_degrees.z = 0.0
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
+	if is_instance_valid(_active_weapon) and _active_weapon.has_method("equip"):
+		_active_weapon.equip()
+
 	if _combat_hud:
 		_combat_hud.hide_death()
 
@@ -339,6 +374,29 @@ func _on_respawned() -> void:
 	])
 
 
+## Switches active weapon slot (0 = Primary, 1 = Secondary).
+func switch_weapon(slot_index: int) -> void:
+	if _is_dead or _is_match_ended:
+		return
+	if slot_index == _active_slot_index:
+		return
+	if slot_index < 0 or slot_index >= _weapons.size():
+		return
+
+	var old_weapon := _active_weapon
+	if is_instance_valid(old_weapon) and old_weapon.has_method("unequip"):
+		old_weapon.unequip()
+
+	_active_slot_index = slot_index
+	_active_weapon = _weapons[_active_slot_index]
+
+	if is_instance_valid(_active_weapon):
+		if _active_weapon.has_method("equip"):
+			_active_weapon.equip()
+		if _active_weapon.has_method("set_aiming"):
+			_active_weapon.set_aiming(_is_aiming)
+
+
 # =============================================================================
 # INPUT — collect mouse delta here; handle per-frame in _physics_process
 # =============================================================================
@@ -346,10 +404,11 @@ func _input(event: InputEvent) -> void:
 	if _is_match_ended:
 		return
 
-	# Dev/debug: Refill ammo (F3)
+	# Dev/debug: Refill ammo (F3) for all inventory weapons
 	if event.is_action_pressed("refill_ammo") and not _is_dead:
-		if _weapon and _weapon.has_method("refill_ammo"):
-			_weapon.refill_ammo()
+		for w in _weapons:
+			if is_instance_valid(w) and w.has_method("refill_ammo"):
+				w.refill_ammo()
 
 	# Mouse look accumulation (only when alive)
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not _is_dead:
@@ -364,11 +423,23 @@ func _input(event: InputEvent) -> void:
 
 
 # =============================================================================
-# PROCESS — weapon input & ADS camera transition
+# PROCESS — weapon switching, weapon input & ADS camera transition
 # =============================================================================
 func _process(delta: float) -> void:
 	if _is_dead or _is_match_ended:
 		return
+
+	# Weapon slot switching inputs
+	if Input.is_action_just_pressed("weapon_slot_1"):
+		switch_weapon(0)
+	elif Input.is_action_just_pressed("weapon_slot_2"):
+		switch_weapon(1)
+	elif Input.is_action_just_pressed("weapon_next"):
+		if _weapons.size() > 1:
+			switch_weapon((_active_slot_index + 1) % _weapons.size())
+	elif Input.is_action_just_pressed("weapon_prev"):
+		if _weapons.size() > 1:
+			switch_weapon((_active_slot_index - 1 + _weapons.size()) % _weapons.size())
 
 	# ADS input (hold RMB)
 	var wants_aim : bool = Input.is_action_pressed("aim") or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
@@ -379,18 +450,21 @@ func _process(delta: float) -> void:
 	if _camera:
 		_camera.fov = lerpf(_base_fov, ADS_FOV, _ads_weight)
 
-	if _weapon == null:
+	if _active_weapon == null or not is_instance_valid(_active_weapon):
 		return
 
-	if _weapon.has_method("set_aiming"):
-		_weapon.set_aiming(_is_aiming)
+	if _active_weapon.has_method("set_aiming"):
+		_active_weapon.set_aiming(_is_aiming)
 
-	# Automatic fire: hold to fire.
-	if Input.is_action_pressed("fire_primary"):
-		_weapon.try_fire()
-	# Reload.
+	# Fire input: automatic vs semi-automatic
+	var is_auto : bool = _active_weapon.is_automatic() if _active_weapon.has_method("is_automatic") else true
+	var wants_fire : bool = Input.is_action_pressed("fire_primary") if is_auto else Input.is_action_just_pressed("fire_primary")
+	if wants_fire:
+		_active_weapon.try_fire()
+
+	# Reload input
 	if Input.is_action_just_pressed("reload"):
-		_weapon.try_reload()
+		_active_weapon.try_reload()
 
 
 # =============================================================================
