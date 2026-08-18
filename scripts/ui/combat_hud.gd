@@ -285,7 +285,7 @@ func update_health(current_hp: float, max_hp: float) -> void:
 	if _damage_trail_bar and is_instance_valid(_damage_trail_bar):
 		if _trail_tween and _trail_tween.is_valid():
 			_trail_tween.kill()
-		if safe_current >= max_hp or safe_current <= 0.0:
+		if safe_current >= max_hp or safe_current <= 0.0 or _damage_trail_bar.size.x < target_w:
 			_damage_trail_bar.size.x = target_w
 		elif is_inside_tree():
 			_trail_tween = create_tween()

@@ -162,7 +162,7 @@ func _test_health_pickup_mechanics(_arena: Node) -> void:
 	else:
 		_fail("Full HP combatant incorrectly consumed HealthKit")
 
-	# 2. Consume when damaged
+	# 2. Consume when damaged (Dummy)
 	var flags := { "collected": false }
 	pk.collected.connect(func(_t: int, _col: Node): flags.collected = true)
 	pk._on_body_entered(dummy)
@@ -172,9 +172,54 @@ func _test_health_pickup_mechanics(_arena: Node) -> void:
 	else:
 		_fail("HealthKit consumption failed (Active: %s, HP: %.1f, Collected: %s)" % [pk.is_active, hp.current_health, flags.collected])
 
+	# 3. Player Controller + CombatHUD Immediate Synchronization Test
+	var player_scene := load("res://scenes/player/player.tscn") as PackedScene
+	var player := player_scene.instantiate() as CharacterBody3D
+	_arena.add_child(player)
+
+	# Set player to 45 HP and update HUD to 45 HP
+	player._health.current_health = 45.0
+	player._combat_hud.update_health(45.0, 100.0)
+
+	var hud_lbl_before : String = player._combat_hud._health_label.text if player._combat_hud._health_label else ""
+	var hud_bar_before : float = player._combat_hud._health_bar.size.x if player._combat_hud._health_bar else 0.0
+
+	var pk_player = pickup_scene.instantiate()
+	_arena.add_child(pk_player)
+	pk_player.amount = 35.0
+
+	# Player collects health pickup
+	pk_player._on_body_entered(player)
+
+	var hud_lbl_after : String = player._combat_hud._health_label.text if player._combat_hud._health_label else ""
+	var hud_bar_after : float = player._combat_hud._health_bar.size.x if player._combat_hud._health_bar else 0.0
+	var target_bar_width : float = 194.0 * 0.80 # 80 HP / 100 HP * 194px
+
+	if player._health.current_health == 80.0 and hud_lbl_after == "80 HP" and is_equal_approx(hud_bar_after, target_bar_width):
+		_pass("Player collected HealthKit: current_health (45 -> 80 HP) and CombatHUD text ('80 HP') and bar (%.1fpx) updated immediately without damage event" % hud_bar_after)
+	else:
+		_fail("Player HUD immediate update failed (HP: %.1f, LblBefore: '%s', LblAfter: '%s', BarAfter: %.1f)" % [
+			player._health.current_health, hud_lbl_before, hud_lbl_after, hud_bar_after
+		])
+
+	# 4. Cap at max health
+	var pk_cap = pickup_scene.instantiate()
+	_arena.add_child(pk_cap)
+	pk_cap.amount = 50.0
+	pk_cap._on_body_entered(player)
+
+	var hud_lbl_cap : String = player._combat_hud._health_label.text if player._combat_hud._health_label else ""
+	if player._health.current_health == 100.0 and hud_lbl_cap == "100 HP":
+		_pass("Healing safely clamped at max_health (100.0 HP) and HUD accurately reflects 100 HP")
+	else:
+		_fail("Health capping failed (HP: %.1f, HUD: '%s')" % [player._health.current_health, hud_lbl_cap])
+
 	pk.queue_free()
+	pk_player.queue_free()
+	pk_cap.queue_free()
 	dummy.queue_free()
 	full_dummy.queue_free()
+	player.queue_free()
 
 
 # =============================================================================

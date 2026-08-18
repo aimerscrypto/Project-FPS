@@ -136,9 +136,13 @@ func _ready() -> void:
 	# Cache base camera FOV
 	if _camera:
 		_base_fov = _camera.fov
+	if _combat_hud == null:
+		_combat_hud = find_child("CombatHUD", true, false)
+
 	# Connect health signals
 	if _health:
 		_health.damage_received.connect(_on_damage_received)
+		_health.healed.connect(_on_healed)
 		_health.died.connect(_on_died)
 		_health.respawned.connect(_on_respawned)
 		_health.spawn_protection_started.connect(_on_spawn_protection_started)
@@ -310,6 +314,11 @@ func _on_damage_received(info: DamageInfo, current_hp: float, max_hp: float) -> 
 		current_hp,
 		max_hp
 	])
+
+
+func _on_healed(_amount: float, current_hp: float, max_hp: float) -> void:
+	if _combat_hud and _combat_hud.has_method("update_health"):
+		_combat_hud.update_health(current_hp, max_hp)
 
 
 func _on_died(killer: Node) -> void:

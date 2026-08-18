@@ -143,6 +143,7 @@ func _ready() -> void:
 		_health.max_health = max_health
 		_health.current_health = max_health
 		_health.damage_received.connect(_on_damage_received)
+		_health.healed.connect(_on_healed)
 		_health.died.connect(_on_died)
 		_health.respawned.connect(_on_respawned)
 		_health.spawn_protection_started.connect(_on_spawn_protection_started)
@@ -973,6 +974,10 @@ func _on_damage_received(info: DamageInfo, _current_hp: float, _max_hp: float) -
 		if _target == null or _state == State.SEARCH or _state == State.IDLE or _state == State.INVESTIGATE:
 			_target = _recent_attacker
 			_reaction_timer = reaction_delay * 0.4
+
+
+func _on_healed(_amount: float, _current_hp: float, _max_hp: float) -> void:
+	_update_hp_label()
 
 
 func _flash_hit() -> void:
