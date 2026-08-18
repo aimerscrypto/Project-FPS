@@ -113,6 +113,49 @@ func get_combatant_stats(combatant: Node) -> Dictionary:
 	return { "name": _get_combatant_name(combatant), "kills": 0, "deaths": 0, "score": 0 }
 
 
+## Returns all combatant scoreboard entries sorted by score/kills descending, then deaths ascending.
+func get_sorted_scoreboard() -> Array[Dictionary]:
+	var list : Array[Dictionary] = []
+	for combatant in _combatant_stats:
+		var stats : Dictionary = _combatant_stats[combatant]
+		list.append({
+			"node": combatant,
+			"name": stats["name"],
+			"kills": stats["kills"],
+			"deaths": stats["deaths"],
+			"score": stats["score"]
+		})
+
+	list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if a["score"] != b["score"]:
+			return a["score"] > b["score"]
+		if a["kills"] != b["kills"]:
+			return a["kills"] > b["kills"]
+		return a["deaths"] < b["deaths"]
+	)
+	return list
+
+
+## Returns the current highest score in the match.
+func get_leading_score() -> int:
+	var highest : int = 0
+	for combatant in _combatant_stats:
+		var s : int = _combatant_stats[combatant]["score"]
+		if s > highest:
+			highest = s
+	return highest
+
+
+## Returns true if the match is currently in progress.
+func is_playing() -> bool:
+	return state == MatchState.PLAYING
+
+
+## Returns true if the match has finished.
+func is_ended() -> bool:
+	return state == MatchState.ENDED
+
+
 # =============================================================================
 # MATCH LIFECYCLE
 # =============================================================================

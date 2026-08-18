@@ -48,6 +48,103 @@ text = "100 HP"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="AmmoDisplay" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -182.0
+offset_top = -72.0
+offset_right = -32.0
+offset_bottom = -28.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="Background" type="ColorRect" parent="AmmoDisplay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.06, 0.07, 0.1, 0.75)
+
+[node name="AmmoLabel" type="Label" parent="AmmoDisplay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 24
+text = "30 / 120"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MatchHeader" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -130.0
+offset_top = 16.0
+offset_right = 130.0
+offset_bottom = 76.0
+grow_horizontal = 2
+mouse_filter = 2
+
+[node name="Background" type="ColorRect" parent="MatchHeader"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.06, 0.07, 0.1, 0.75)
+
+[node name="HeaderVBox" type="VBoxContainer" parent="MatchHeader"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="TimerLabel" type="Label" parent="MatchHeader/HeaderVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "05:00"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ScoreLabel" type="Label" parent="MatchHeader/HeaderVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.85, 0.9, 1)
+theme_override_font_sizes/font_size = 13
+text = "YOU 0    LEADER 0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="KillFeed" type="VBoxContainer" parent="."]
+layout_mode = 3
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -330.0
+offset_top = 16.0
+offset_right = -24.0
+offset_bottom = 220.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_constants/separation = 4
+
 [node name="DeathOverlay" type="Control" parent="."]
 visible = false
 layout_mode = 3
@@ -105,5 +202,121 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.8, 1, 1)
 theme_override_font_sizes/font_size = 17
 text = "Respawning in 2.5s..."
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ResultsOverlay" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DarkBackdrop" type="ColorRect" parent="ResultsOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.04, 0.04, 0.07, 0.92)
+
+[node name="CenterBox" type="VBoxContainer" parent="ResultsOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -340.0
+offset_top = -250.0
+offset_right = 340.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="ResultTitle" type="Label" parent="ResultsOverlay/CenterBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.95, 0.4, 1)
+theme_override_font_sizes/font_size = 46
+text = "VICTORY"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="WinnerLabel" type="Label" parent="ResultsOverlay/CenterBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.85, 0.9, 1)
+theme_override_font_sizes/font_size = 18
+text = "Winner: Player (Score: 25)"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ScoreboardContainer" type="VBoxContainer" parent="ResultsOverlay/CenterBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ScoreboardHeader" type="HBoxContainer" parent="ResultsOverlay/CenterBox/ScoreboardContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HeaderRank" type="Label" parent="ResultsOverlay/CenterBox/ScoreboardContainer/ScoreboardHeader"]
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.65, 0.75, 1)
+theme_override_font_sizes/font_size = 14
+text = "RANK"
+horizontal_alignment = 1
+
+[node name="HeaderName" type="Label" parent="ResultsOverlay/CenterBox/ScoreboardContainer/ScoreboardHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.6, 0.65, 0.75, 1)
+theme_override_font_sizes/font_size = 14
+text = "NAME"
+
+[node name="HeaderKills" type="Label" parent="ResultsOverlay/CenterBox/ScoreboardContainer/ScoreboardHeader"]
+custom_minimum_size = Vector2(65, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.65, 0.75, 1)
+theme_override_font_sizes/font_size = 14
+text = "KILLS"
+horizontal_alignment = 1
+
+[node name="HeaderDeaths" type="Label" parent="ResultsOverlay/CenterBox/ScoreboardContainer/ScoreboardHeader"]
+custom_minimum_size = Vector2(65, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.65, 0.75, 1)
+theme_override_font_sizes/font_size = 14
+text = "DEATHS"
+horizontal_alignment = 1
+
+[node name="HeaderScore" type="Label" parent="ResultsOverlay/CenterBox/ScoreboardContainer/ScoreboardHeader"]
+custom_minimum_size = Vector2(65, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.65, 0.75, 1)
+theme_override_font_sizes/font_size = 14
+text = "SCORE"
+horizontal_alignment = 1
+
+[node name="RowsContainer" type="VBoxContainer" parent="ResultsOverlay/CenterBox/ScoreboardContainer"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="PlayAgainButton" type="Button" parent="ResultsOverlay/CenterBox"]
+custom_minimum_size = Vector2(180, 42)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 18
+text = "PLAY AGAIN"
+
+[node name="RestartHintLabel" type="Label" parent="ResultsOverlay/CenterBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.7, 0.9, 1)
+theme_override_font_sizes/font_size = 13
+text = "Press [SPACE] or [ENTER] to Play Again"
 horizontal_alignment = 1
 vertical_alignment = 1

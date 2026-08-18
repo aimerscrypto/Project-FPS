@@ -1,7 +1,7 @@
 # Project FPS — Development Status
 
 **Last Updated:** 2026-08-18  
-**Current Milestone:** Milestone 7 — First-Person Viewmodel & Procedural Animation / Production Assets (COMPLETE & RUNTIME VERIFIED)
+**Current Milestone:** Milestone 8 — Complete FFA Match Loop & Match HUD (IMPLEMENTATION COMPLETE — PENDING MANUAL PLAYTEST)
 
 ---
 
@@ -50,6 +50,27 @@
     - High-detail Assault Rifle model (`fps gun.fbx` / `fps_weapon_animated.glb`) with calibrated transforms and materials.
     - Production 3D character model (`player.glb`) integrated into `BasicBot` visuals.
   - **Automated Verification:** 21/21 tests in `test_weapon_restoration.gd`, 21/21 tests in `test_milestone6_map.gd`, and 32/32 tests in `test_ffa_foundation.gd` all passing.
+- **Milestone 8 (Complete FFA Match Loop & Match HUD):** IMPLEMENTATION COMPLETE (Pending Manual Playtest):
+  - **Match Information HUD (`CombatHUD`):**
+    - Top-center Match Timer countdown formatted as `MM:SS` with low-time warning tint ($\le$ 30s).
+    - Top-center Live Score Tracker displaying `YOU <PlayerScore>    LEADER <LeaderScore>`.
+    - Bottom-right Weapon Ammo counter (`Clip / Reserve`) updated dynamically on fire, reload, and ammo change events.
+  - **Top-Right Kill Feed (`KillFeed`):**
+    - Compact elimination feed displaying `Killer → Victim`.
+    - Local player highlighted (cyan for kills, red for deaths).
+    - Maximum 5 active entries with automatic fade-out and destruction after ~3.5s.
+  - **End-of-Match & Results Screen (`ResultsOverlay`):**
+    - Displays `VICTORY` (green) or `DEFEAT` (crimson) banner based on match outcome.
+    - Winner announcement and winning score subtitle.
+    - Dynamic 8-combatant Scoreboard table sorted by score/kills descending, then deaths ascending.
+    - Local player row visually highlighted in cyan with `(YOU)` tag.
+  - **Match State & Lifecycle Control:**
+    - On `match_ended`, player movement, shooting, reload, ADS, and pending respawns are cleanly halted.
+    - Bot AI navigation, targeting, shooting, and respawns are suppressed.
+    - Mouse cursor is automatically released (`Input.MOUSE_MODE_VISIBLE`) on results screen.
+  - **Instant Match Restart (`PlayAgainButton` / Keybindings):**
+    - "PLAY AGAIN" button and `[SPACE]` / `[ENTER]` keybindings cleanly reload the arena scene.
+    - Scene reload completely resets MatchManager state, combatant stats, player/bot health, timers, and restores mouse capture (`Input.MOUSE_MODE_CAPTURED`).
 
 ---
 

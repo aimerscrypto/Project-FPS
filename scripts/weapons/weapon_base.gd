@@ -12,6 +12,8 @@ extends Node3D
 # Attach any WeaponData resource via the Inspector to change weapon behaviour.
 # =============================================================================
 
+signal ammo_changed(current_ammo: int, reserve_ammo: int)
+
 # -----------------------------------------------------------------------------
 # EXPORTS
 # -----------------------------------------------------------------------------
@@ -189,6 +191,7 @@ func _ready() -> void:
 		return
 	_current_ammo = data.magazine_size
 	_reserve_ammo = data.reserve_ammo
+	ammo_changed.emit(_current_ammo, _reserve_ammo)
 	# RayCast3D length set from weapon data range.
 	_raycast.target_position = Vector3(0.0, 0.0, -data.range_meters)
 	if is_instance_valid(_muzzle_flash):
@@ -267,7 +270,10 @@ func try_fire() -> void:
 		return
 
 	if _current_ammo <= 0:
-		_dry_fire()
+		if _reserve_ammo > 0:
+			_start_reload()
+		else:
+			_dry_fire()
 		return
 
 	_fire()
@@ -287,12 +293,28 @@ func try_reload() -> void:
 	_start_reload()
 
 
+## Development/debug: Refills magazine and reserve ammo to maximum configured values.
+func refill_ammo() -> void:
+	if data == null:
+		return
+	_current_ammo = data.magazine_size
+	_reserve_ammo = data.reserve_ammo
+	if _state == WeaponState.RELOADING:
+		_state = WeaponState.READY
+		_reload_timer = 0.0
+		_current_reload_pos = Vector3.ZERO
+		_current_reload_rot = Vector3.ZERO
+	ammo_changed.emit(_current_ammo, _reserve_ammo)
+	print("[DEV] Ammo refilled: %d / %d" % [_current_ammo, _reserve_ammo])
+
+
 # =============================================================================
 # FIRE
 # =============================================================================
 func _fire() -> void:
 	_state = WeaponState.FIRING
 	_current_ammo -= 1
+	ammo_changed.emit(_current_ammo, _reserve_ammo)
 	_fire_timer = 1.0 / data.fire_rate
 	_time_since_fired = 0.0
 
@@ -335,6 +357,10 @@ func _fire() -> void:
 		_muzzle_timer = MUZZLE_FLASH_DURATION
 
 	print("[Weapon] Fired. Ammo: %d / %d" % [_current_ammo, _reserve_ammo])
+
+	# Auto-reload when magazine reaches 0 and reserve ammo is available
+	if _current_ammo <= 0 and _reserve_ammo > 0:
+		_start_reload()
 
 
 func _dry_fire() -> void:
@@ -451,6 +477,7 @@ func _finish_reload() -> void:
 	_current_ammo += taken
 	_reserve_ammo -= taken
 	_state = WeaponState.READY
+	ammo_changed.emit(_current_ammo, _reserve_ammo)
 	print("[Weapon] Reload complete. Ammo: %d / %d" % [_current_ammo, _reserve_ammo])
 
 

@@ -72,6 +72,7 @@ var _state          : MoveState = MoveState.WALK
 var _is_sliding     : bool      = false
 var _slide_velocity : Vector3   = Vector3.ZERO
 var _is_dead        : bool      = false
+var _is_match_ended : bool      = false
 var _spawn_position : Vector3   = Vector3.ZERO
 
 # ADS state
@@ -139,6 +140,30 @@ func _ready() -> void:
 			_weapon.set_player(self)
 		if _weapon.has_method("set_camera"):
 			_weapon.set_camera(_camera)
+		if _weapon.has_signal("ammo_changed"):
+			_weapon.ammo_changed.connect(_on_weapon_ammo_changed)
+
+	# Connect MatchManager signals & initialize CombatHUD
+	var tree := get_tree()
+	if tree:
+		var match_mgr = tree.get_first_node_in_group("match_manager")
+		if match_mgr:
+			if match_mgr.has_signal("match_ended"):
+				match_mgr.match_ended.connect(_on_match_ended)
+			if _combat_hud and _combat_hud.has_method("setup_match_manager"):
+				_combat_hud.setup_match_manager(match_mgr, self)
+
+	# Initial ammo push to HUD
+	if _weapon and _weapon.has_method("get_ammo_info") and _combat_hud and _combat_hud.has_method("update_ammo"):
+		var ammo_info : Dictionary = _weapon.get_ammo_info()
+		_combat_hud.update_ammo(ammo_info.get("current", 30), ammo_info.get("reserve", 120))
+
+	# Ensure refill_ammo action is mapped to F3 as fallback
+	if not InputMap.has_action("refill_ammo"):
+		InputMap.add_action("refill_ammo")
+		var ev := InputEventKey.new()
+		ev.physical_keycode = KEY_F3
+		InputMap.action_add_event("refill_ammo", ev)
 
 
 ## Adds recoil impulse to camera pitch and yaw.
@@ -253,8 +278,23 @@ func _on_died(killer: Node) -> void:
 
 
 func _do_respawn() -> void:
+	if _is_match_ended:
+		return
 	if _health:
 		_health.respawn()
+
+
+func _on_weapon_ammo_changed(current: int, reserve: int) -> void:
+	if _combat_hud and _combat_hud.has_method("update_ammo"):
+		_combat_hud.update_ammo(current, reserve)
+
+
+func _on_match_ended(_winner: Node) -> void:
+	_is_match_ended = true
+	_is_aiming = false
+	_ads_weight = 0.0
+	if _camera:
+		_camera.fov = _base_fov
 
 
 func _on_respawned() -> void:
@@ -303,6 +343,14 @@ func _on_respawned() -> void:
 # INPUT — collect mouse delta here; handle per-frame in _physics_process
 # =============================================================================
 func _input(event: InputEvent) -> void:
+	if _is_match_ended:
+		return
+
+	# Dev/debug: Refill ammo (F3)
+	if event.is_action_pressed("refill_ammo") and not _is_dead:
+		if _weapon and _weapon.has_method("refill_ammo"):
+			_weapon.refill_ammo()
+
 	# Mouse look accumulation (only when alive)
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not _is_dead:
 		_mouse_delta += event.relative
@@ -319,7 +367,7 @@ func _input(event: InputEvent) -> void:
 # PROCESS — weapon input & ADS camera transition
 # =============================================================================
 func _process(delta: float) -> void:
-	if _is_dead:
+	if _is_dead or _is_match_ended:
 		return
 
 	# ADS input (hold RMB)
@@ -350,6 +398,15 @@ func _process(delta: float) -> void:
 # =============================================================================
 func _physics_process(delta: float) -> void:
 	if _is_dead:
+		return
+
+	if _is_match_ended:
+		if not is_on_floor():
+			velocity.y -= GRAVITY * delta
+		else:
+			velocity.x = move_toward(velocity.x, 0.0, DECEL_GROUND * delta)
+			velocity.z = move_toward(velocity.z, 0.0, DECEL_GROUND * delta)
+		move_and_slide()
 		return
 
 	# Fall / out-of-bounds safety check

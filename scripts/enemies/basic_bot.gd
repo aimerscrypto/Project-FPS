@@ -57,6 +57,7 @@ enum State { IDLE, SEARCH, CHASE, ATTACK, DEAD }
 var _state          : State   = State.SEARCH
 var _target         : Node3D  = null
 var _spawn_position : Vector3 = Vector3.ZERO
+var _is_match_ended : bool    = false
 
 # Combatant Score tracking
 var kills  : int = 0
@@ -102,6 +103,13 @@ func _ready() -> void:
 		_health.damage_received.connect(_on_damage_received)
 		_health.died.connect(_on_died)
 		_health.respawned.connect(_on_respawned)
+
+	# Connect MatchManager signals
+	var tree := get_tree()
+	if tree:
+		var match_mgr = tree.get_first_node_in_group("match_manager")
+		if match_mgr and match_mgr.has_signal("match_ended"):
+			match_mgr.match_ended.connect(_on_match_ended)
 
 	# Setup hit flash material
 	_flash_material = StandardMaterial3D.new()
@@ -173,11 +181,19 @@ func _update_state_label() -> void:
 				_state_label.modulate = Color(0.5, 0.5, 0.5, 1.0)  # Gray
 
 
+func _on_match_ended(_winner: Node) -> void:
+	_is_match_ended = true
+	_target = null
+	velocity = Vector3.ZERO
+	if is_instance_valid(_muzzle_flash):
+		_muzzle_flash.visible = false
+
+
 # =============================================================================
 # PHYSICS PROCESS
 # =============================================================================
 func _physics_process(delta: float) -> void:
-	if _state == State.DEAD:
+	if _state == State.DEAD or _is_match_ended:
 		if not is_on_floor():
 			velocity.y -= gravity * delta
 			move_and_slide()
@@ -448,6 +464,8 @@ func _tick_timers(delta: float) -> void:
 # FIRING & DAMAGE DELIVERY
 # =============================================================================
 func _try_fire(target_aim_pos: Vector3) -> void:
+	if _is_match_ended:
+		return
 	if _is_reloading:
 		return
 	if _current_ammo <= 0:
@@ -528,7 +546,7 @@ func _fire(target_aim_pos: Vector3) -> void:
 # =============================================================================
 
 func take_damage(info: DamageInfo) -> void:
-	if _state == State.DEAD:
+	if _state == State.DEAD or _is_match_ended:
 		return
 	if _health:
 		_health.take_damage(info)
@@ -580,6 +598,8 @@ func _on_died(_killer: Node) -> void:
 
 
 func _do_respawn() -> void:
+	if _is_match_ended:
+		return
 	if _health:
 		_health.respawn()
 
