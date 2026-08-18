@@ -13,7 +13,7 @@ extends Node3D
 # =============================================================================
 
 signal ammo_changed(current_ammo: int, reserve_ammo: int)
-signal target_hit(is_headshot: bool)
+signal target_hit(is_headshot: bool, is_kill: bool)
 
 # -----------------------------------------------------------------------------
 # EXPORTS
@@ -505,24 +505,41 @@ func _do_hitscan() -> void:
 			if hit_collider.is_in_group("head"):
 				dmg_info.hit_type = DamageInfo.HitType.HEAD
 
+			# Check target health before dealing damage to determine if this is a kill
+			var target_health_node : Health = null
+			if hit_collider is Health:
+				target_health_node = hit_collider
+			elif hit_collider.has_node("Health"):
+				target_health_node = hit_collider.get_node("Health") as Health
+			elif hit_collider.get_parent() and hit_collider.get_parent().has_node("Health"):
+				target_health_node = hit_collider.get_parent().get_node("Health") as Health
+
+			var final_damage : float = dmg_info.get_final_damage()
+			var is_kill : bool = false
+			if target_health_node and not target_health_node.is_dead and target_health_node.current_health > 0.0:
+				if target_health_node.current_health - final_damage <= 0.0:
+					is_kill = true
+
 			# Dispatch damage cleanly through damageable interface
 			var did_damage : bool = false
 			if hit_collider.has_method("take_damage"):
 				hit_collider.take_damage(dmg_info)
 				did_damage = true
-			elif hit_collider.has_node("Health"):
-				var health_node = hit_collider.get_node("Health")
-				if health_node and health_node.has_method("take_damage"):
-					health_node.take_damage(dmg_info)
-					did_damage = true
+			elif target_health_node and target_health_node.has_method("take_damage"):
+				target_health_node.take_damage(dmg_info)
+				did_damage = true
 			elif hit_collider.get_parent() and hit_collider.get_parent().has_method("take_damage"):
 				hit_collider.get_parent().take_damage(dmg_info)
 				did_damage = true
 
 			if did_damage:
 				var is_headshot : bool = (dmg_info.hit_type == DamageInfo.HitType.HEAD)
-				AudioManager.play_hitmarker(is_headshot)
-				target_hit.emit(is_headshot)
+				if is_kill:
+					AudioManager.play_kill_confirm(is_headshot)
+				else:
+					AudioManager.play_hitmarker(is_headshot)
+				target_hit.emit(is_headshot, is_kill)
+
 
 		# Spawn 3D impact audio & visual marker at hit point
 		AudioManager.play_3d("impact", hit_point, AudioManager.BUS_SFX, -2.0, 0.06, 40.0, 4.0)

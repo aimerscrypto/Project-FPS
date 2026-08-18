@@ -4,13 +4,16 @@ class_name CombatHUD
 # =============================================================================
 # Project FPS — Combat HUD
 # Milestone 8 — Complete FFA Match Loop & Match HUD
+# Milestone 11 — Player Feedback, Polish & Gameplay Juice
 #
 # Complete, lightweight 2D match and combat readability HUD providing:
-# - Bottom-left Player Health display ("100 HP")
+# - Bottom-left Player Health bar with trailing chip damage and dynamic HP readout
 # - Bottom-right Weapon Ammo counter ("30 / 120")
 # - Top-center Match Timer ("MM:SS") & Score Tracker ("YOU X  LEADER Y")
 # - Top-right Kill Feed (recent eliminations with auto-fade)
-# - Retriggerable smooth screen-space damage flash
+# - Retriggerable smooth screen-space damage vignette & perimeter flash
+# - Directional damage indicators showing approximate attacker bearing
+# - Low-health pulsing visual warning
 # - Responsive "YOU DIED" death overlay with killer info and respawn timer
 # - End-of-Match Results Screen with Victory/Defeat banner, full 8-player
 #   scoreboard, mouse release, and instant replay action.
@@ -19,36 +22,55 @@ class_name CombatHUD
 # -----------------------------------------------------------------------------
 # NODE REFERENCES
 # -----------------------------------------------------------------------------
-@onready var _health_label     : Label          = $HealthDisplay/HealthLabel
-@onready var _damage_flash     : ColorRect      = $DamageFlash
-@onready var _ammo_label       : Label          = $AmmoDisplay/AmmoLabel
-@onready var _timer_label      : Label          = $MatchHeader/HeaderVBox/TimerLabel
-@onready var _score_label      : Label          = $MatchHeader/HeaderVBox/ScoreLabel
-@onready var _kill_feed        : VBoxContainer  = $KillFeed
+@onready var _health_label      : Label          = $HealthDisplay/HealthLabel
+@onready var _health_bar        : ColorRect      = $HealthDisplay/HealthBar
+@onready var _damage_trail_bar  : ColorRect      = $HealthDisplay/DamageTrailBar
+@onready var _damage_flash      : ColorRect      = $DamageFlash
+@onready var _damage_vignette   : TextureRect    = $DamageVignette
+@onready var _low_hp_vignette   : TextureRect    = $LowHealthVignette
+@onready var _directional_damage: Control        = $DirectionalDamage
+@onready var _ammo_label        : Label          = $AmmoDisplay/AmmoLabel
+@onready var _timer_label       : Label          = $MatchHeader/HeaderVBox/TimerLabel
+@onready var _score_label       : Label          = $MatchHeader/HeaderVBox/ScoreLabel
+@onready var _kill_feed         : VBoxContainer  = $KillFeed
 
 # Death Overlay
-@onready var _death_overlay    : Control        = $DeathOverlay
-@onready var _death_killer     : Label          = $DeathOverlay/CenterBox/KillerLabel
-@onready var _respawn_timer_lbl: Label          = $DeathOverlay/CenterBox/RespawnTimerLabel
+@onready var _death_overlay     : Control        = $DeathOverlay
+@onready var _death_killer      : Label          = $DeathOverlay/CenterBox/KillerLabel
+@onready var _respawn_timer_lbl : Label          = $DeathOverlay/CenterBox/RespawnTimerLabel
 
 # Results Overlay
-@onready var _results_overlay  : Control        = $ResultsOverlay
-@onready var _result_title     : Label          = $ResultsOverlay/CenterBox/ResultTitle
-@onready var _winner_label     : Label          = $ResultsOverlay/CenterBox/WinnerLabel
-@onready var _rows_container   : VBoxContainer  = $ResultsOverlay/CenterBox/ScoreboardContainer/RowsContainer
-@onready var _play_again_btn   : Button         = $ResultsOverlay/CenterBox/PlayAgainButton
+@onready var _results_overlay   : Control        = $ResultsOverlay
+@onready var _result_title      : Label          = $ResultsOverlay/CenterBox/ResultTitle
+@onready var _winner_label      : Label          = $ResultsOverlay/CenterBox/WinnerLabel
+@onready var _rows_container    : VBoxContainer  = $ResultsOverlay/CenterBox/ScoreboardContainer/RowsContainer
+@onready var _play_again_btn    : Button         = $ResultsOverlay/CenterBox/PlayAgainButton
+
+# -----------------------------------------------------------------------------
+# CONSTANTS & CONFIGURATION
+# -----------------------------------------------------------------------------
+const HEALTH_BAR_MAX_WIDTH : float = 194.0
+const NUM_DIR_INDICATORS   : int   = 8
 
 # -----------------------------------------------------------------------------
 # STATE
 # -----------------------------------------------------------------------------
-var _flash_tween       : Tween        = null
-var _respawn_time_left : float        = 0.0
-var _is_dead           : bool         = false
-var _is_results_shown  : bool         = false
-var _match_mgr         : MatchManager = null
-var _player_node       : Node         = null
-var _player_score      : int          = 0
-var _leader_score      : int          = 0
+var _flash_tween           : Tween        = null
+var _vignette_tween        : Tween        = null
+var _low_hp_tween          : Tween        = null
+var _trail_tween           : Tween        = null
+var _is_low_health_pulsing : bool         = false
+var _respawn_time_left     : float        = 0.0
+var _is_dead               : bool         = false
+var _is_results_shown      : bool         = false
+var _match_mgr             : MatchManager = null
+var _player_node           : Node         = null
+var _player_score          : int          = 0
+var _leader_score          : int          = 0
+
+# Directional indicators pool
+var _dir_indicators        : Array[Control] = []
+var _dir_indicator_index   : int            = 0
 
 
 # =============================================================================
@@ -58,11 +80,19 @@ func _ready() -> void:
 	if _damage_flash:
 		_damage_flash.color = Color(1.0, 0.0, 0.0, 0.0)
 		_damage_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if _damage_vignette:
+		_damage_vignette.modulate = Color(1.0, 1.0, 1.0, 0.0)
+		_damage_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if _low_hp_vignette:
+		_low_hp_vignette.modulate = Color(1.0, 1.0, 1.0, 0.0)
+		_low_hp_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if _death_overlay:
 		_death_overlay.visible = false
 		_death_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if _results_overlay:
 		_results_overlay.visible = false
+
+	_init_directional_indicators()
 
 	if _play_again_btn:
 		_play_again_btn.pressed.connect(restart_match)
@@ -78,6 +108,34 @@ func _ready() -> void:
 		var mgr = tree.get_first_node_in_group("match_manager")
 		if mgr is MatchManager:
 			setup_match_manager(mgr, _player_node)
+
+
+func _init_directional_indicators() -> void:
+	if _directional_damage == null or not is_instance_valid(_directional_damage):
+		return
+	_dir_indicators.clear()
+	for i in range(NUM_DIR_INDICATORS):
+		var pivot := Control.new()
+		pivot.name = "DirPivot_%d" % i
+		pivot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pivot.position = Vector2.ZERO
+		pivot.size = Vector2.ZERO
+		pivot.modulate.a = 0.0
+
+		# Stylized curved chevron / arrowhead pointing outward at 115px radius
+		var wedge := Polygon2D.new()
+		wedge.name = "Wedge"
+		wedge.polygon = PackedVector2Array([
+			Vector2(0, -126),
+			Vector2(13, -108),
+			Vector2(0, -114),
+			Vector2(-13, -108)
+		])
+		wedge.color = Color(1.0, 0.18, 0.18, 0.95)
+		pivot.add_child(wedge)
+
+		_directional_damage.add_child(pivot)
+		_dir_indicators.append(pivot)
 
 
 ## Connects the HUD to the MatchManager and identifies the local player node.
@@ -135,40 +193,111 @@ func restart_match() -> void:
 # HEALTH & DAMAGE PRESENTATION
 # =============================================================================
 
-## Updates current HP label and dynamic color.
+## Updates current HP label, health bar width, and dynamic state colors.
 func update_health(current_hp: float, max_hp: float) -> void:
-	if _health_label == null or not is_instance_valid(_health_label):
-		return
+	var safe_current : float = max(current_hp, 0.0)
+	var ratio : float = clampf(safe_current / max_hp, 0.0, 1.0) if max_hp > 0.0 else 0.0
+	var target_w : float = HEALTH_BAR_MAX_WIDTH * ratio
 
-	_health_label.text = "%d HP" % int(max(current_hp, 0.0))
+	if _health_label and is_instance_valid(_health_label):
+		_health_label.text = "%d HP" % int(ceil(safe_current))
 
-	var ratio := current_hp / max_hp if max_hp > 0.0 else 1.0
-	if ratio > 0.6:
-		_health_label.modulate = Color(1.0, 1.0, 1.0, 1.0)       # Crisp White
-	elif ratio > 0.3:
-		_health_label.modulate = Color(1.0, 0.8, 0.2, 1.0)       # Amber
+	if _health_bar and is_instance_valid(_health_bar):
+		_health_bar.size.x = target_w
+		if ratio > 0.6:
+			_health_bar.color = Color(0.2, 0.85, 0.4, 0.85)     # Crisp Green
+			if _health_label: _health_label.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		elif ratio > 0.3:
+			_health_bar.color = Color(1.0, 0.75, 0.2, 0.85)     # Amber Warning
+			if _health_label: _health_label.modulate = Color(1.0, 0.85, 0.3, 1.0)
+		else:
+			_health_bar.color = Color(1.0, 0.2, 0.2, 0.9)       # Critical Red
+			if _health_label: _health_label.modulate = Color(1.0, 0.25, 0.25, 1.0)
+
+	# Damage trailing chip bar animation
+	if _damage_trail_bar and is_instance_valid(_damage_trail_bar):
+		if _trail_tween and _trail_tween.is_valid():
+			_trail_tween.kill()
+		if safe_current >= max_hp or safe_current <= 0.0:
+			_damage_trail_bar.size.x = target_w
+		elif is_inside_tree():
+			_trail_tween = create_tween()
+			_trail_tween.tween_interval(0.12)
+			_trail_tween.tween_property(_damage_trail_bar, "size:x", target_w, 0.35).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		else:
+			_damage_trail_bar.size.x = target_w
+
+	# Low Health Warning state
+	if ratio <= 0.3 and not _is_dead and not _is_results_shown and safe_current > 0.0:
+		_start_low_health_warning()
 	else:
-		_health_label.modulate = Color(1.0, 0.25, 0.25, 1.0)     # Critical Red
+		_stop_low_health_warning()
 
 
-## Trigger screen damage flash.
-func show_damage(_info: DamageInfo, current_hp: float, max_hp: float) -> void:
+func _start_low_health_warning() -> void:
+	if _is_low_health_pulsing:
+		return
+	_is_low_health_pulsing = true
+	if _low_hp_vignette and is_inside_tree():
+		if _low_hp_tween and _low_hp_tween.is_valid():
+			_low_hp_tween.kill()
+		_low_hp_tween = create_tween().set_loops()
+		_low_hp_tween.tween_property(_low_hp_vignette, "modulate:a", 0.60, 0.4).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+		_low_hp_tween.tween_property(_low_hp_vignette, "modulate:a", 0.15, 0.4).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+
+
+func _stop_low_health_warning() -> void:
+	_is_low_health_pulsing = false
+	if _low_hp_tween and _low_hp_tween.is_valid():
+		_low_hp_tween.kill()
+	if _low_hp_vignette and is_instance_valid(_low_hp_vignette):
+		_low_hp_vignette.modulate.a = 0.0
+
+
+## Trigger screen damage vignette, perimeter flash, and optional directional indicator.
+func show_damage(_info: DamageInfo, current_hp: float, max_hp: float, rel_angle: float = 0.0, has_direction: bool = false) -> void:
 	update_health(current_hp, max_hp)
 
-	if _damage_flash == null or not is_instance_valid(_damage_flash):
-		return
+	if _vignette_tween and _vignette_tween.is_valid():
+		_vignette_tween.kill()
 
-	if _flash_tween and _flash_tween.is_valid():
-		_flash_tween.kill()
-
-	_damage_flash.color = Color(0.9, 0.05, 0.05, 0.35)
+	if _damage_vignette and is_instance_valid(_damage_vignette):
+		_damage_vignette.modulate.a = 0.85
+	if _damage_flash and is_instance_valid(_damage_flash):
+		_damage_flash.color = Color(0.9, 0.05, 0.05, 0.25)
 
 	if is_inside_tree():
-		_flash_tween = create_tween()
-		if _flash_tween:
-			_flash_tween.tween_property(_damage_flash, "color:a", 0.0, 0.3).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		_vignette_tween = create_tween().set_parallel(true)
+		if _damage_vignette and is_instance_valid(_damage_vignette):
+			_vignette_tween.tween_property(_damage_vignette, "modulate:a", 0.0, 0.40).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+		if _damage_flash and is_instance_valid(_damage_flash):
+			_vignette_tween.tween_property(_damage_flash, "color:a", 0.0, 0.25).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	else:
-		_damage_flash.color.a = 0.0
+		if _damage_vignette and is_instance_valid(_damage_vignette):
+			_damage_vignette.modulate.a = 0.0
+		if _damage_flash and is_instance_valid(_damage_flash):
+			_damage_flash.color.a = 0.0
+
+	if has_direction:
+		show_directional_damage(rel_angle)
+
+
+## Displays a radial directional damage indicator rotated to rel_angle.
+func show_directional_damage(rel_angle: float) -> void:
+	if _dir_indicators.is_empty():
+		return
+
+	var pivot := _dir_indicators[_dir_indicator_index]
+	_dir_indicator_index = (_dir_indicator_index + 1) % _dir_indicators.size()
+
+	pivot.rotation = rel_angle
+	pivot.modulate.a = 1.0
+
+	if is_inside_tree():
+		var tween := pivot.create_tween()
+		tween.tween_property(pivot, "modulate:a", 0.0, 0.55).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	else:
+		pivot.modulate.a = 0.0
 
 
 ## Display death overlay with killer name and duration countdown.
@@ -178,10 +307,17 @@ func show_death(killer: Node, duration: float = 2.5) -> void:
 
 	_is_dead = true
 	_respawn_time_left = duration
+	_stop_low_health_warning()
 
 	if _health_label:
 		_health_label.text = "0 HP"
-		_health_label.modulate = Color(0.6, 0.2, 0.2, 1.0)
+		_health_label.modulate = Color(0.7, 0.2, 0.2, 1.0)
+
+	if _health_bar:
+		_health_bar.size.x = 0.0
+
+	if _damage_trail_bar:
+		_damage_trail_bar.size.x = 0.0
 
 	if _damage_flash:
 		_damage_flash.color = Color(0.6, 0.0, 0.0, 0.2)
@@ -208,6 +344,7 @@ func show_death(killer: Node, duration: float = 2.5) -> void:
 func hide_death() -> void:
 	_is_dead = false
 	_respawn_time_left = 0.0
+	_stop_low_health_warning()
 
 	if _death_overlay:
 		_death_overlay.visible = false
@@ -215,6 +352,9 @@ func hide_death() -> void:
 
 	if _damage_flash:
 		_damage_flash.color = Color(1.0, 0.0, 0.0, 0.0)
+
+	if _damage_vignette:
+		_damage_vignette.modulate.a = 0.0
 
 	update_health(100.0, 100.0)
 
@@ -349,6 +489,7 @@ func add_kill_feed_entry(killer_name: String, victim_name: String, is_player_kil
 
 func _on_match_ended(winner: Node) -> void:
 	_is_results_shown = true
+	_stop_low_health_warning()
 
 	# Hide death overlay if active
 	if _death_overlay:

@@ -259,16 +259,37 @@ func take_damage(info: DamageInfo) -> void:
 
 
 func _on_damage_received(info: DamageInfo, current_hp: float, max_hp: float) -> void:
+	var rel_angle : float = 0.0
+	var has_direction : bool = false
+
+	if info and info.attacker and info.attacker is Node3D and info.attacker != self:
+		var attacker_pos : Vector3 = (info.attacker as Node3D).global_position
+		var to_attacker : Vector3 = attacker_pos - global_position
+		var h_dir : Vector2 = Vector2(to_attacker.x, to_attacker.z)
+		if h_dir.length_squared() > 0.01:
+			var cam_basis := _camera.global_transform.basis if _camera else global_transform.basis
+			var cam_fwd : Vector3 = -cam_basis.z
+			var cam_dir : Vector2 = Vector2(cam_fwd.x, cam_fwd.z).normalized()
+			var attacker_dir : Vector2 = h_dir.normalized()
+			var angle_cam := atan2(cam_dir.x, -cam_dir.y)
+			var angle_att := atan2(attacker_dir.x, -attacker_dir.y)
+			rel_angle = wrapf(angle_att - angle_cam, -PI, PI)
+			has_direction = true
+
 	if _combat_hud:
-		_combat_hud.show_damage(info, current_hp, max_hp)
+		_combat_hud.show_damage(info, current_hp, max_hp, rel_angle, has_direction)
 
 	# Audio feedback (2D player damage cue)
 	AudioManager.play_2d("player_damage", AudioManager.BUS_SFX, 0.0, 0.05)
 
-	# Subtle camera flinch on hit (layered safely with mouse & recoil)
-	_damage_kick_pitch += randf_range(-1.2, -0.6)
-	_damage_kick_yaw += randf_range(-1.0, 1.0)
-	_damage_kick_roll += randf_range(-1.5, 1.5)
+	# Controlled directional camera flinch on hit (layered safely with mouse & recoil)
+	_damage_kick_pitch += randf_range(-1.4, -0.7)
+	if has_direction:
+		_damage_kick_yaw += clampf(-sin(rel_angle) * 1.5, -1.8, 1.8)
+		_damage_kick_roll += clampf(-sin(rel_angle) * 2.0, -2.5, 2.5)
+	else:
+		_damage_kick_yaw += randf_range(-1.0, 1.0)
+		_damage_kick_roll += randf_range(-1.5, 1.5)
 
 	var attacker_name : String = str(info.attacker.name) if (info and info.attacker) else "Unknown"
 	print("[PLAYER DAMAGE] Took %.0f damage from %s. HP: %.0f/%.0f" % [
@@ -289,11 +310,14 @@ func _on_died(killer: Node) -> void:
 	_ads_weight = 0.0
 	if _camera:
 		_camera.fov = _base_fov
-	_damage_kick_pitch = 0.0
-	_damage_kick_yaw = 0.0
-	_damage_kick_roll = 0.0
 	_recoil_pitch = 0.0
 	_recoil_yaw = 0.0
+
+	# Death camera presentation: tilt and floor sink
+	_damage_kick_roll = 14.0
+	_damage_kick_pitch = 6.0
+	_damage_kick_yaw = 0.0
+	_camera_mount.position.y -= 0.35
 
 	# Audio feedback (2D player death cue)
 	AudioManager.play_2d("player_death", AudioManager.BUS_SFX, 1.0, 0.0)
@@ -324,9 +348,9 @@ func _on_weapon_ammo_changed(current: int, reserve: int, weapon_source: Node = n
 		_combat_hud.update_ammo(current, reserve)
 
 
-func _on_target_hit(is_headshot: bool) -> void:
+func _on_target_hit(is_headshot: bool, is_kill: bool = false) -> void:
 	if _crosshair_hud and _crosshair_hud.has_method("show_hitmarker"):
-		_crosshair_hud.show_hitmarker(is_headshot)
+		_crosshair_hud.show_hitmarker(is_headshot, is_kill)
 
 
 
@@ -368,7 +392,11 @@ func _on_respawned() -> void:
 	_camera_mount.rotation_degrees.x = 0.0
 	_camera.rotation_degrees.y = 0.0
 	_camera.rotation_degrees.z = 0.0
+	_camera_mount.position.y = _current_eye_height - (_current_height * 0.5)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+	# Audio feedback (Tactical respawn cue)
+	AudioManager.play_respawn()
 
 	if is_instance_valid(_active_weapon) and _active_weapon.has_method("equip"):
 		_active_weapon.equip()
@@ -381,6 +409,7 @@ func _on_respawned() -> void:
 		_health.current_health if _health else 100.0,
 		_health.max_health if _health else 100.0
 	])
+
 
 
 ## Switches active weapon slot (0 = Primary, 1 = Secondary).

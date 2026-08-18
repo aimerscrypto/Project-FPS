@@ -38,6 +38,7 @@ const SOUND_PATHS : Dictionary = {
 	"slide": "res://assets/audio/player/slide.wav",
 	"player_damage": "res://assets/audio/player/player_damage.wav",
 	"player_death": "res://assets/audio/player/player_death.wav",
+	"respawn": "res://assets/audio/player/respawn.wav",
 	# Combat & Bots
 	"bot_fire": "res://assets/audio/combat/bot_fire.wav",
 	"impact": "res://assets/audio/combat/impact.wav",
@@ -46,6 +47,7 @@ const SOUND_PATHS : Dictionary = {
 	# UI
 	"hitmarker": "res://assets/audio/ui/hitmarker.wav",
 	"headshot": "res://assets/audio/ui/headshot.wav",
+	"kill_confirm": "res://assets/audio/ui/kill_confirm.wav",
 	# Environment
 	"arena_ambient": "res://assets/audio/environment/arena_ambient.wav",
 }
@@ -239,6 +241,20 @@ func play_hitmarker(is_headshot: bool = false) -> void:
 		play_2d("headshot", BUS_UI, 1.0, 0.0)
 	else:
 		play_2d("hitmarker", BUS_UI, 0.0, 0.0)
+
+
+## Helper to trigger a satisfying kill confirmation sound (UI bus).
+func play_kill_confirm(is_headshot: bool = false) -> void:
+	if is_headshot:
+		play_2d("headshot", BUS_UI, 1.5, 0.0)
+		play_2d("kill_confirm", BUS_UI, 2.0, 0.0)
+	else:
+		play_2d("kill_confirm", BUS_UI, 1.5, 0.0)
+
+
+## Helper to trigger a tactical respawn sound cue.
+func play_respawn() -> void:
+	play_2d("respawn", BUS_SFX, 0.0, 0.0)
 
 
 ## Starts looping ambient background audio on the Ambience bus.

@@ -1,7 +1,7 @@
 # Project FPS — Development Status
 
 **Last Updated:** 2026-08-18  
-**Current Milestone:** Milestone 9 — Multiple Weapons / Weapon Switching (IMPLEMENTATION COMPLETE — PENDING MANUAL PLAYTEST)
+**Current Milestone:** Milestone 11 — Player Feedback, Polish & Gameplay Juice (IMPLEMENTATION COMPLETE — PENDING MANUAL PLAYTEST)
 
 ---
 
@@ -71,7 +71,7 @@
   - **Instant Match Restart (`PlayAgainButton` / Keybindings):**
     - "PLAY AGAIN" button and `[SPACE]` / `[ENTER]` keybindings cleanly reload the arena scene.
     - Scene reload completely resets MatchManager state, combatant stats, player/bot health, timers, and restores mouse capture (`Input.MOUSE_MODE_CAPTURED`).
-- **Milestone 9 (Multiple Weapons / Weapon Switching):** IMPLEMENTATION COMPLETE (Pending Manual Playtest):
+- **Milestone 9 (Multiple Weapons / Weapon Switching):** COMPLETE & RUNTIME VERIFIED:
   - **WeaponBase Lifecycle & Equip Lock:**
     - Added `equip()`, `unequip()`, `is_equipping()`, `is_automatic()`, and a ~0.20s equip lock before firing/reloading.
     - Unequipping safely cancels active reloads without altering weapon's current or reserve ammo.
@@ -86,6 +86,42 @@
     - Active weapon ownership cleanly delegates fire, reload, ADS, and motion processing exclusively to the equipped weapon.
     - Switching immediately updates `CombatHUD` ammo counter via the `ammo_changed` signal.
     - `F3` debug refill restores magazine and reserve ammo for all inventory weapons simultaneously.
+- **Milestone 10 (Weapon Polish & Combat Feel):** COMPLETE & RUNTIME VERIFIED:
+  - Weapon-specific fire, dryfire, and reload audio.
+  - Dynamic muzzle flash scaling and randomized roll per shot.
+  - Ring-buffer pooling shell casing ejection system (`CasingManager`).
+  - Distinct Assault Rifle and Pistol procedural reload keyframe animations.
+  - Crisp body & headshot hitmarker ticks.
+  - 59/59 automated tests passing in `test_milestone10_weapon_polish.gd`.
+- **Milestone 11 (Player Feedback, Polish & Gameplay Juice):** IMPLEMENTATION COMPLETE (Pending Manual Playtest):
+  - **Phase 1: Local Player Damage Feedback & Directional Indicators:**
+    - Retriggerable radial screen-space damage vignette and perimeter flash on damage.
+    - 8-slot pooled radial directional damage indicators pointing toward attacker bearing relative to camera yaw with smooth 0.55s decay.
+    - Directional camera flinch / impact kick impulse reacting to incoming damage bearing.
+  - **Phase 2 & 5: Hit Feel Hierarchy & Kill Confirmation:**
+    - Instant client-side lethal damage detection in `WeaponBase._fire()` before dispatch.
+    - 4 distinct hit feel tiers in `CrosshairHUD`:
+      - Body hit: 1.0x scale crisp white diagonal cross (0.12s decay).
+      - Headshot hit: 1.35x scale crimson red critical punch (0.20s decay).
+      - Body kill: 1.55x scale vivid amber/crimson expanded kill punch (0.25s decay).
+      - Headshot kill: 1.75x scale critical red-gold kill flare (0.30s decay).
+    - Distinct audio cues via `AudioManager.play_kill_confirm(is_headshot)`.
+  - **Phase 3: Death & Respawn Presentation:**
+    - Authoritative combat suppression on death (halts movement, shooting, reloading, ADS, weapon switching).
+    - Knockdown death camera presentation (+14° roll tilt, +6° pitch slump, -0.35m floor sink).
+    - Dynamic "YOU DIED" death overlay with killer name and live countdown ("Respawning in 2.5s...").
+    - Clean state restoration on respawn: eye height, camera angles, active weapon equip, and tactical respawn audio cue (`AudioManager.play_respawn()`).
+  - **Phase 4: Compact Health Display & Juice:**
+    - Bottom-left compact health bar with trailing chip damage effect (`DamageTrailBar`).
+    - Dynamic color transitions: Green (>60% HP) $\to$ Amber (30-60% HP) $\to$ Critical Red ($\le$30% HP).
+    - Low-health pulsating perimeter warning vignette when HP $\le$ 30, cleanly stopped upon healing/respawn.
+  - **Phase 6: Combat Audio Polish:**
+    - Integrated native 16-bit 44.1kHz audio assets: `kill_confirm.wav` and `respawn.wav`.
+    - Integrated `AudioManager` helper methods for kill confirmation and respawn playback.
+  - **Phase 7: Automated Verification:**
+    - 65/65 tests in `test_milestone11_combat_feedback.gd` passing.
+    - All regression suites (59/59 M10, 21/21 Restoration, 32/32 FFA, 21/21 M6 Map) passing.
+
 
 ---
 
@@ -221,7 +257,15 @@ project-fps/
 - [x] **10 Verified Spawn Points:** Solid ground placement with line-of-sight obstruction and dynamic safe spawn integration.
 - [x] **Procedural Viewmodel Animations & ADS:** Idle sway, Lissajous walk bob, tactical sprint pump, crouch compression, mouse look inertia, recoil kick, and smooth ADS zoom.
 - [x] **Production 3D Assets:** High-detail weapon visual and character bot models assigned and aligned.
+- [x] **Milestone 10 Weapon Polish:** Audio keys, casing ejection, custom reload curves, dynamic muzzle flashes, and dry-fire tactile kicks.
+- [x] **Milestone 11 Combat Feedback & Juice:**
+  - Radial screen damage vignette and 8-slot directional damage indicators.
+  - 4-tier hit feel hierarchy (Body, Headshot, Kill, Headshot Kill) with distinct visual scale & audio cues.
+  - Knockdown death camera presentation (+14° roll, +6° pitch slump, -0.35m sink) & dynamic respawn timer.
+  - Health bar with trailing chip damage and pulsating low-health warning.
 - [x] **Automated Regression Test Suites:**
+  - 65/65 tests in `test_milestone11_combat_feedback.gd` passing.
+  - 59/59 tests in `test_milestone10_weapon_polish.gd` passing.
   - 32/32 tests in `test_ffa_foundation.gd` passing.
   - 21/21 tests in `test_milestone6_map.gd` passing.
   - 21/21 tests in `test_weapon_restoration.gd` passing.

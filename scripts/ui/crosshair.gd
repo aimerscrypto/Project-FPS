@@ -3,12 +3,14 @@ class_name CrosshairHUD
 
 # =============================================================================
 # Project FPS — CrosshairHUD
-# Milestone 10 — Hit Feedback & Hitmarkers
+# Milestone 10 — Hit Feedback & Hitmarkers | Milestone 11 — Hit Feel & Kill Confirmation
 #
 # Provides:
 # - Standard 2D center reticle
-# - Clean body-hit feedback (crisp white diagonal hitmarker, 0.12s decay)
-# - High-impact headshot feedback (vivid crimson red enlarged hitmarker, 0.20s decay)
+# - Clean body-hit feedback (crisp white diagonal hitmarker, 0.12s decay, 1.0x scale)
+# - High-impact headshot feedback (vivid crimson red enlarged hitmarker, 0.20s decay, 1.35x scale)
+# - High-impact kill confirmation (vivid amber/crimson enlarged hitmarker, 0.25s decay, 1.55x scale)
+# - Critical headshot kill confirmation (high-contrast red-gold critical hitmarker, 0.30s decay, 1.75x scale)
 # =============================================================================
 
 @onready var _hitmarker : Control = $CrosshairControl/Center/Hitmarker
@@ -24,16 +26,36 @@ func _ready() -> void:
 
 
 ## Triggers a clean visual hitmarker centered over the reticle.
-## is_headshot: true for red critical punch, false for white standard tick
-func show_hitmarker(is_headshot: bool = false) -> void:
+## is_headshot: true for critical hit/headshot
+## is_kill: true if the shot killed the target
+func show_hitmarker(is_headshot: bool = false, is_kill: bool = false) -> void:
 	if _hitmarker == null or not is_instance_valid(_hitmarker):
 		return
 
 	if _hit_tween and _hit_tween.is_valid():
 		_hit_tween.kill()
 
-	if is_headshot:
-		_hitmarker.modulate = Color(1.0, 0.2, 0.2, 1.0) # Vivid Crimson Red
+	if is_kill and is_headshot:
+		# HEADSHOT KILL: Strongest confirmation, largest punch, red-gold critical tint
+		_hitmarker.modulate = Color(1.0, 0.15, 0.25, 1.0)
+		_hitmarker.scale = Vector2(1.75, 1.75)
+		if is_inside_tree():
+			_hit_tween = create_tween()
+			_hit_tween.set_parallel(true)
+			_hit_tween.tween_property(_hitmarker, "modulate:a", 0.0, 0.30).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			_hit_tween.tween_property(_hitmarker, "scale", Vector2(1.1, 1.1), 0.30).set_ease(Tween.EASE_OUT)
+	elif is_kill:
+		# BODY KILL: Vivid amber/crimson punch
+		_hitmarker.modulate = Color(1.0, 0.35, 0.15, 1.0)
+		_hitmarker.scale = Vector2(1.55, 1.55)
+		if is_inside_tree():
+			_hit_tween = create_tween()
+			_hit_tween.set_parallel(true)
+			_hit_tween.tween_property(_hitmarker, "modulate:a", 0.0, 0.25).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+			_hit_tween.tween_property(_hitmarker, "scale", Vector2(1.0, 1.0), 0.25).set_ease(Tween.EASE_OUT)
+	elif is_headshot:
+		# HEADSHOT: Vivid Crimson Red
+		_hitmarker.modulate = Color(1.0, 0.2, 0.2, 1.0)
 		_hitmarker.scale = Vector2(1.35, 1.35)
 		if is_inside_tree():
 			_hit_tween = create_tween()
@@ -41,7 +63,8 @@ func show_hitmarker(is_headshot: bool = false) -> void:
 			_hit_tween.tween_property(_hitmarker, "modulate:a", 0.0, 0.20).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 			_hit_tween.tween_property(_hitmarker, "scale", Vector2(1.0, 1.0), 0.20).set_ease(Tween.EASE_OUT)
 	else:
-		_hitmarker.modulate = Color(1.0, 1.0, 1.0, 0.95) # Crisp White
+		# BODY HIT: Crisp White
+		_hitmarker.modulate = Color(1.0, 1.0, 1.0, 0.95)
 		_hitmarker.scale = Vector2(1.0, 1.0)
 		if is_inside_tree():
 			_hit_tween = create_tween()
