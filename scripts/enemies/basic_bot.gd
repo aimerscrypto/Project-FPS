@@ -471,6 +471,9 @@ func _fire(target_aim_pos: Vector3) -> void:
 	var muzzle_pos := _muzzle.global_position if is_instance_valid(_muzzle) else global_position + Vector3(0.0, 1.2, 0.0)
 	var aim_dir := (target_aim_pos - muzzle_pos).normalized()
 
+	# Audio feedback (3D positional bot gunfire)
+	AudioManager.play_3d("bot_fire", muzzle_pos, AudioManager.BUS_SFX, 0.0, 0.06, 50.0, 4.0)
+
 	# Angular aim spread
 	var spread_rad := deg_to_rad(attack_spread_degrees)
 	var spread_x := randf_range(-spread_rad, spread_rad)
@@ -516,6 +519,9 @@ func _fire(target_aim_pos: Vector3) -> void:
 			elif hit_collider.get_parent() and hit_collider.get_parent().has_method("take_damage"):
 				hit_collider.get_parent().take_damage(dmg_info)
 
+		# 3D bullet impact audio in the world
+		AudioManager.play_3d("impact", hit_point, AudioManager.BUS_SFX, -3.0, 0.06, 35.0, 3.0)
+
 
 # =============================================================================
 # HEALTH & DAMAGE RECEPTION
@@ -534,6 +540,10 @@ func take_damage(info: DamageInfo) -> void:
 func _on_damage_received(info: DamageInfo, _current_hp: float, _max_hp: float) -> void:
 	_update_hp_label()
 	_flash_hit()
+
+	# Audio feedback (3D positional bot hit/damage)
+	var hit_pos : Vector3 = info.hit_position if (info and info.hit_position != Vector3.ZERO) else (global_position + Vector3(0.0, 0.8, 0.0))
+	AudioManager.play_3d("bot_damage", hit_pos, AudioManager.BUS_SFX, -1.0, 0.06, 35.0, 3.0)
 
 	# If attacked, react to attacker
 	if info and info.attacker and info.attacker != self:
@@ -561,6 +571,9 @@ func _on_died(_killer: Node) -> void:
 	_hp_label.visible = false
 	_state_label.visible = false
 	_target = null
+
+	# Audio feedback (3D positional bot death/destruction)
+	AudioManager.play_3d("bot_death", global_position + Vector3(0.0, 0.8, 0.0), AudioManager.BUS_SFX, 1.0, 0.05, 45.0, 4.0)
 
 	var timer := get_tree().create_timer(respawn_delay)
 	timer.timeout.connect(_do_respawn)

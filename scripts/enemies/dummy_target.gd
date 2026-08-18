@@ -49,9 +49,12 @@ func take_damage(info: DamageInfo) -> void:
 		_health.take_damage(info)
 
 
-func _on_damage_received(_info: DamageInfo, _current_hp: float, _max_hp: float) -> void:
+func _on_damage_received(info: DamageInfo, _current_hp: float, _max_hp: float) -> void:
 	_update_hp_label()
 	_flash_hit()
+	# Audio feedback (3D positional impact on dummy)
+	var hit_pos : Vector3 = info.hit_position if (info and info.hit_position != Vector3.ZERO) else (global_position + Vector3(0.0, 1.0, 0.0))
+	AudioManager.play_3d("impact", hit_pos, AudioManager.BUS_SFX, 0.0, 0.05, 35.0, 3.0)
 
 
 func _flash_hit() -> void:
@@ -68,6 +71,9 @@ func _on_died(_killer: Node) -> void:
 	_collision.set_deferred("disabled", true)
 	_visuals.visible = false
 	_hp_label.visible = false
+
+	# Audio feedback (3D positional destruction on dummy)
+	AudioManager.play_3d("bot_death", global_position + Vector3(0.0, 1.0, 0.0), AudioManager.BUS_SFX, 1.0, 0.05, 40.0, 4.0)
 
 	# Respawn after 2.0 seconds
 	var respawn_timer := get_tree().create_timer(2.0)

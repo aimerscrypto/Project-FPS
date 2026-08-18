@@ -101,6 +101,12 @@ var _damage_kick_recovery  : float = 14.0  # Rate of damage flinch recovery (deg
 # Prevent holding jump to auto-jump — require a fresh press
 var _jump_consumed  : bool = false
 
+# Footstep cadence tracking (distance-based, independent of weapon bob)
+var _step_distance_accumulator : float = 0.0
+const STEP_DISTANCE_WALK       : float = 2.4   # meters per footstep
+const STEP_DISTANCE_SPRINT     : float = 2.8   # meters per sprint stride
+const STEP_DISTANCE_CROUCH     : float = 1.6   # meters per crouch step
+
 
 # =============================================================================
 # READY
@@ -199,6 +205,9 @@ func _on_damage_received(info: DamageInfo, current_hp: float, max_hp: float) -> 
 	if _combat_hud:
 		_combat_hud.show_damage(info, current_hp, max_hp)
 
+	# Audio feedback (2D player damage cue)
+	AudioManager.play_2d("player_damage", AudioManager.BUS_SFX, 0.0, 0.05)
+
 	# Subtle camera flinch on hit (layered safely with mouse & recoil)
 	_damage_kick_pitch += randf_range(-1.2, -0.6)
 	_damage_kick_yaw += randf_range(-1.0, 1.0)
@@ -228,6 +237,9 @@ func _on_died(killer: Node) -> void:
 	_damage_kick_roll = 0.0
 	_recoil_pitch = 0.0
 	_recoil_yaw = 0.0
+
+	# Audio feedback (2D player death cue)
+	AudioManager.play_2d("player_death", AudioManager.BUS_SFX, 1.0, 0.0)
 
 	if _combat_hud:
 		_combat_hud.show_death(killer, 2.5)
@@ -422,9 +434,10 @@ func _handle_movement(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
 	else:
-		# Landing — end any air state
+		# Landing — end any air state and trigger audio
 		if _state == MoveState.AIR:
 			_state = MoveState.WALK
+			AudioManager.play_2d("land", AudioManager.BUS_SFX, -2.0, 0.05)
 		_jump_consumed = false
 
 	# --- State transitions ---
@@ -443,8 +456,39 @@ func _handle_movement(delta: float) -> void:
 		MoveState.AIR:
 			_move_air(delta)
 
+	# --- Footstep cadence tracking (grounded and moving, independent of weapon bob) ---
+	_process_footstep_audio(delta)
+
 	# --- Jump ---
 	_handle_jump()
+
+
+func _process_footstep_audio(delta: float) -> void:
+	if not is_on_floor() or _state == MoveState.AIR or _state == MoveState.SLIDE:
+		_step_distance_accumulator = 0.0
+		return
+
+	var h_vel := Vector2(velocity.x, velocity.z)
+	var h_speed := h_vel.length()
+
+	if h_speed > 0.5:
+		_step_distance_accumulator += h_speed * delta
+
+		var step_target := STEP_DISTANCE_WALK
+		var step_vol := -4.0
+
+		if _state == MoveState.SPRINT:
+			step_target = STEP_DISTANCE_SPRINT
+			step_vol = -2.0
+		elif _state == MoveState.CROUCH:
+			step_target = STEP_DISTANCE_CROUCH
+			step_vol = -8.0
+
+		if _step_distance_accumulator >= step_target:
+			_step_distance_accumulator = 0.0
+			AudioManager.play_2d("footstep", AudioManager.BUS_SFX, step_vol, 0.06)
+	else:
+		_step_distance_accumulator = 0.0
 
 
 # =============================================================================
@@ -522,6 +566,9 @@ func _move_air(delta: float) -> void:
 func _start_slide() -> void:
 	_state = MoveState.SLIDE
 	_is_sliding = true
+	_step_distance_accumulator = 0.0
+	# Audio feedback (2D player slide)
+	AudioManager.play_2d("slide", AudioManager.BUS_SFX, -2.0, 0.04)
 	# Launch with a boost in the current facing direction
 	var dir := _get_wish_dir()
 	if dir.length_squared() < 0.01:
@@ -562,6 +609,9 @@ func _handle_jump() -> void:
 		velocity.y = JUMP_VELOCITY
 		_state = MoveState.AIR
 		_jump_consumed = true
+		_step_distance_accumulator = 0.0
+		# Audio feedback (2D player jump)
+		AudioManager.play_2d("jump", AudioManager.BUS_SFX, -3.0, 0.05)
 		# End slide on jump
 		if _is_sliding:
 			_end_slide()

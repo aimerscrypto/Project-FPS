@@ -296,6 +296,9 @@ func _fire() -> void:
 	_fire_timer = 1.0 / data.fire_rate
 	_time_since_fired = 0.0
 
+	# Audio feedback (2D player weapon fire)
+	AudioManager.play_2d("ar_fire", AudioManager.BUS_SFX, 0.0, 0.04)
+
 	# Hitscan
 	_do_hitscan()
 
@@ -335,6 +338,8 @@ func _fire() -> void:
 
 
 func _dry_fire() -> void:
+	# Audio feedback (dry fire click)
+	AudioManager.play_2d("ar_dryfire", AudioManager.BUS_SFX, -2.0, 0.03)
 	# Limit dry-fire spam messaging.
 	print("[Weapon] DRY FIRE — magazine empty. Press R to reload.")
 	_fire_timer = 0.3  # short delay before re-triggering dry fire message
@@ -377,18 +382,28 @@ func _do_hitscan() -> void:
 			dmg_info.hit_normal = hit_normal
 			dmg_info.hit_direction = (_raycast.global_transform.basis * _raycast.target_position).normalized()
 			dmg_info.hit_type = DamageInfo.HitType.BODY
+			if hit_collider.is_in_group("head"):
+				dmg_info.hit_type = DamageInfo.HitType.HEAD
 
 			# Dispatch damage cleanly through damageable interface
+			var did_damage : bool = false
 			if hit_collider.has_method("take_damage"):
 				hit_collider.take_damage(dmg_info)
+				did_damage = true
 			elif hit_collider.has_node("Health"):
 				var health_node = hit_collider.get_node("Health")
 				if health_node and health_node.has_method("take_damage"):
 					health_node.take_damage(dmg_info)
+					did_damage = true
 			elif hit_collider.get_parent() and hit_collider.get_parent().has_method("take_damage"):
 				hit_collider.get_parent().take_damage(dmg_info)
+				did_damage = true
 
-		# Spawn a brief impact marker at the hit point.
+			if did_damage:
+				AudioManager.play_hitmarker(dmg_info.hit_type == DamageInfo.HitType.HEAD)
+
+		# Spawn 3D impact audio & visual marker at hit point
+		AudioManager.play_3d("impact", hit_point, AudioManager.BUS_SFX, -2.0, 0.06, 40.0, 4.0)
 		_spawn_impact_marker(hit_point, hit_normal)
 	else:
 		print("[HIT] No collision detected.")
@@ -425,6 +440,8 @@ func _spawn_impact_marker(point: Vector3, normal: Vector3) -> void:
 func _start_reload() -> void:
 	_state = WeaponState.RELOADING
 	_reload_timer = data.reload_time
+	# Audio feedback (2D player weapon reload)
+	AudioManager.play_2d("ar_reload", AudioManager.BUS_SFX, -1.0, 0.0)
 	print("[Weapon] Reloading... (%.1fs)" % data.reload_time)
 
 

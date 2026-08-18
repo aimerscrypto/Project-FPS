@@ -12,6 +12,9 @@ extends Node3D
 
 
 func _ready() -> void:
+	# Start ambient audio on Ambience bus
+	AudioManager.play_ambient("arena_ambient", -8.0)
+
 	if _nav_region and _nav_region.navigation_mesh:
 		var source_data := NavigationMeshSourceGeometryData3D.new()
 		NavigationServer3D.parse_source_geometry_data(_nav_region.navigation_mesh, source_data, _nav_region)
