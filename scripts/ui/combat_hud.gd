@@ -359,6 +359,45 @@ func hide_death() -> void:
 	update_health(100.0, 100.0)
 
 
+# Spawn Protection Indicator
+var _shield_label : Label = null
+var _shield_tween : Tween = null
+
+
+## Displays temporary spawn protection badge near health bar.
+func show_spawn_protection(duration: float = 1.2) -> void:
+	if _shield_label == null:
+		var health_disp := get_node_or_null("HealthDisplay")
+		if health_disp:
+			_shield_label = Label.new()
+			_shield_label.name = "ShieldLabel"
+			_shield_label.text = "[SHIELD]"
+			_shield_label.add_theme_font_size_override("font_size", 14)
+			_shield_label.modulate = Color(0.25, 0.95, 1.0, 1.0)
+			_shield_label.position = Vector2(215, 6)
+			health_disp.add_child(_shield_label)
+
+	if _shield_label and is_instance_valid(_shield_label):
+		_shield_label.visible = true
+		_shield_label.modulate.a = 1.0
+		if _shield_tween and _shield_tween.is_valid():
+			_shield_tween.kill()
+		if is_inside_tree():
+			_shield_tween = create_tween()
+			_shield_tween.tween_interval(maxf(duration - 0.3, 0.1))
+			_shield_tween.tween_property(_shield_label, "modulate:a", 0.0, 0.3)
+			_shield_tween.tween_callback(func(): if _shield_label: _shield_label.visible = false)
+
+
+## Hides spawn protection badge immediately.
+func hide_spawn_protection() -> void:
+	if _shield_tween and _shield_tween.is_valid():
+		_shield_tween.kill()
+	if _shield_label and is_instance_valid(_shield_label):
+		_shield_label.visible = false
+		_shield_label.modulate.a = 0.0
+
+
 # =============================================================================
 # AMMO, TIMER & SCORE PRESENTATION
 # =============================================================================

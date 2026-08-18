@@ -103,6 +103,8 @@ func _ready() -> void:
 		_health.damage_received.connect(_on_damage_received)
 		_health.died.connect(_on_died)
 		_health.respawned.connect(_on_respawned)
+		_health.spawn_protection_started.connect(_on_spawn_protection_started)
+		_health.spawn_protection_ended.connect(_on_spawn_protection_ended)
 
 	# Connect MatchManager signals
 	var tree := get_tree()
@@ -169,6 +171,11 @@ func _set_state(new_state: State) -> void:
 
 func _update_state_label() -> void:
 	if is_instance_valid(_state_label):
+		if _health and _health.is_spawn_protected:
+			_state_label.text = "STATE: " + State.keys()[_state] + " [SHIELD]"
+			_state_label.modulate = Color(0.25, 0.95, 1.0, 1.0)
+			return
+
 		_state_label.text = "STATE: " + State.keys()[_state]
 		match _state:
 			State.IDLE, State.SEARCH:
@@ -179,6 +186,14 @@ func _update_state_label() -> void:
 				_state_label.modulate = Color(1.0, 0.2, 0.2, 1.0)  # Red
 			State.DEAD:
 				_state_label.modulate = Color(0.5, 0.5, 0.5, 1.0)  # Gray
+
+
+func _on_spawn_protection_started(_duration: float) -> void:
+	_update_state_label()
+
+
+func _on_spawn_protection_ended() -> void:
+	_update_state_label()
 
 
 func _on_match_ended(_winner: Node) -> void:

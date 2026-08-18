@@ -139,6 +139,8 @@ func _ready() -> void:
 		_health.damage_received.connect(_on_damage_received)
 		_health.died.connect(_on_died)
 		_health.respawned.connect(_on_respawned)
+		_health.spawn_protection_started.connect(_on_spawn_protection_started)
+		_health.spawn_protection_ended.connect(_on_spawn_protection_ended)
 
 	# Register weapons in inventory slots
 	_weapons.clear()
@@ -409,6 +411,16 @@ func _on_respawned() -> void:
 		_health.current_health if _health else 100.0,
 		_health.max_health if _health else 100.0
 	])
+
+
+func _on_spawn_protection_started(duration: float) -> void:
+	if _combat_hud and _combat_hud.has_method("show_spawn_protection"):
+		_combat_hud.show_spawn_protection(duration)
+
+
+func _on_spawn_protection_ended() -> void:
+	if _combat_hud and _combat_hud.has_method("hide_spawn_protection"):
+		_combat_hud.hide_spawn_protection()
 
 
 

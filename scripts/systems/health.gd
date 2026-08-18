@@ -14,21 +14,45 @@ signal damage_received(damage_info: DamageInfo, current_hp: float, max_hp: float
 signal healed(amount: float, current_hp: float, max_hp: float)
 signal died(killer: Node)
 signal respawned()
+signal spawn_protection_started(duration: float)
+signal spawn_protection_ended()
 
-@export var max_health : float = 100.0
+@export var max_health                 : float = 100.0
+@export var spawn_protection_duration  : float = 1.2
 
-var current_health : float = 100.0
-var is_dead        : bool  = false
+var current_health       : float = 100.0
+var is_dead              : bool  = false
+var is_spawn_protected   : bool  = false
+var _spawn_protection_timer : float = 0.0
 
 
 func _ready() -> void:
 	current_health = max_health
 	is_dead = false
+	is_spawn_protected = false
+	_spawn_protection_timer = 0.0
+
+
+func _process(delta: float) -> void:
+	if is_spawn_protected:
+		_spawn_protection_timer -= delta
+		if _spawn_protection_timer <= 0.0:
+			is_spawn_protected = false
+			_spawn_protection_timer = 0.0
+			spawn_protection_ended.emit()
+
+
+## Activates temporary spawn invulnerability.
+func activate_spawn_protection(duration: float = -1.0) -> void:
+	var dur : float = duration if duration > 0.0 else spawn_protection_duration
+	is_spawn_protected = true
+	_spawn_protection_timer = dur
+	spawn_protection_started.emit(dur)
 
 
 ## Apply damage using a DamageInfo object.
 func take_damage(info: DamageInfo) -> void:
-	if is_dead:
+	if is_dead or is_spawn_protected:
 		return
 
 	var final_damage : float = info.get_final_damage() if info else 0.0
@@ -64,6 +88,8 @@ func die(killer: Node = null) -> void:
 	if is_dead:
 		return
 	is_dead = true
+	is_spawn_protected = false
+	_spawn_protection_timer = 0.0
 	current_health = 0.0
 
 	var entity_name : String = str(get_parent().name) if get_parent() else str(name)
@@ -84,10 +110,16 @@ func die(killer: Node = null) -> void:
 	died.emit(killer)
 
 
-## Reset health to full and revive.
+## Reset health to full, grant spawn protection, and revive.
 func respawn() -> void:
 	is_dead = false
 	current_health = max_health
+	activate_spawn_protection(spawn_protection_duration)
 	var entity_name : String = str(get_parent().name) if get_parent() else str(name)
-	print("[RESPAWN] %s respawned. HP: %.0f/%.0f" % [entity_name, current_health, max_health])
+	print("[RESPAWN] %s respawned with %.1fs protection. HP: %.0f/%.0f" % [
+		entity_name,
+		spawn_protection_duration,
+		current_health,
+		max_health
+	])
 	respawned.emit()

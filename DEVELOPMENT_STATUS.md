@@ -1,7 +1,7 @@
 # Project FPS — Development Status
 
 **Last Updated:** 2026-08-18  
-**Current Milestone:** Milestone 11 — Player Feedback, Polish & Gameplay Juice (IMPLEMENTATION COMPLETE — PENDING MANUAL PLAYTEST)
+**Current Milestone:** Milestone 12 — Map Gameplay & Spawn Quality (COMPLETE & RUNTIME VERIFIED)
 
 ---
 
@@ -263,9 +263,31 @@ project-fps/
   - 4-tier hit feel hierarchy (Body, Headshot, Kill, Headshot Kill) with distinct visual scale & audio cues.
   - Knockdown death camera presentation (+14° roll, +6° pitch slump, -0.35m sink) & dynamic respawn timer.
   - Health bar with trailing chip damage and pulsating low-health warning.
-- [x] **Automated Regression Test Suites:**
-  - 65/65 tests in `test_milestone11_combat_feedback.gd` passing.
-  - 59/59 tests in `test_milestone10_weapon_polish.gd` passing.
-  - 32/32 tests in `test_ffa_foundation.gd` passing.
-  - 21/21 tests in `test_milestone6_map.gd` passing.
-  - 21/21 tests in `test_weapon_restoration.gd` passing.
+- [x] **Milestone 12 (Map Gameplay & Spawn Quality):**
+  - **Tactical 3-Lane Combat Arena (50m x 50m):**
+    - **West Flank (Left Lane - X: -25 to -12):** Close-quarters flanking corridor with staggered hard cover pillars, waist-high concrete barricades, and tactical rotation openings into Center. Ideal for Pistol and aggressive CQC flanking.
+    - **Center Skirmish Hub (Middle Lane - X: -12 to +5):** Primary mid-range combat hub with massive Center Monument (blocks long-range cross-map snipes), 4 angled waist-high barriers (1.1m) providing sliding/peeking cover, and North/South transition pillars.
+    - **East Wing & Vertical Tiers (Right Lane - X: +5 to +25):**
+      - **Level +1 High Ground Catwalk (@ Y = +3.5m):** Elevated tactical vantage deck with west parapet protection and 4 support columns. Accessible via North and South 19.3° ramps.
+      - **Level -1 Subterranean Underpass Trench (@ Y = -2.5m):** Recessed concrete tunnel beneath Catwalk with central baffles and soft lighting, providing 100% overhead cover from sniper fire. Accessible via North and South 22.6° ramps.
+  - **Authoritative Spawn Protection System:**
+    - Integrated into core `Health` component (`is_spawn_protected: bool`, duration `1.2s`).
+    - Automatically grants 1.2s invulnerability upon `respawn()` while allowing completely uninhibited movement, aiming, firing, and weapon switching.
+    - Incoming damage deals 0 damage during protection.
+    - Clear visual feedback: `CombatHUD` displays `[SHIELD]` status badge, and `BasicBot` reflects `[SHIELD]` state in its 3D StateLabel.
+  - **Intelligent Multi-Factor Spawn Selection:**
+    - Deterministic scoring algorithm in `MatchManager.get_spawn_point()` evaluating all 10 registered spawn points:
+      - Enemy proximity distance weighting (rewards distance $\ge 12$m, heavily penalizes immediate danger $< 8$m).
+      - Enemy cluster density penalty (deducts score per enemy within 18m radius).
+      - Physics Line-of-Sight (LOS) visibility penalty (raycasts from enemy eye height to candidate spawn eye height, avoiding spawning in open enemy crosshairs).
+      - Recent death location distance penalty (avoids spawning directly on top of combatant's latest elimination coordinates).
+  - **Bot Navigation & Spacing Verified:**
+    - NavigationRegion3D runtime baking produces 317 clean 3D polygons connecting all 3 vertical tiers with zero stuck spots.
+  - **Automated Verification Test Suite:**
+    - 45/45 tests in `test_milestone12_map_gameplay.gd` passing.
+    - 65/65 tests in `test_milestone11_combat_feedback.gd` passing.
+    - 59/59 tests in `test_milestone10_weapon_polish.gd` passing.
+    - 32/32 tests in `test_ffa_foundation.gd` passing.
+    - 21/21 tests in `test_milestone6_map.gd` passing.
+    - 21/21 tests in `test_weapon_restoration.gd` passing.
+    - **Total: 243 / 243 automated tests passing (100%).**
