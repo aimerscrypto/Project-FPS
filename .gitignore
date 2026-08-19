@@ -5,3 +5,6 @@
 # Blender backup files
 *.blend1
 *.blend2
+
+# Temporary scratch and audit scripts
+scratch/

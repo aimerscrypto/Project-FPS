@@ -32,8 +32,10 @@ var _pool_index : int = 0
 
 # Shared visual resources
 var _mat_brass       : StandardMaterial3D = null
+var _mat_shotgun     : StandardMaterial3D = null
 var _mesh_rifle      : CylinderMesh       = null
 var _mesh_pistol     : CylinderMesh       = null
+var _mesh_shotgun    : CylinderMesh       = null
 
 
 func _ready() -> void:
@@ -47,6 +49,11 @@ func _create_resources() -> void:
 	_mat_brass.albedo_color = Color(0.88, 0.70, 0.28, 1.0) # Warm metallic brass
 	_mat_brass.metallic = 0.90
 	_mat_brass.roughness = 0.25
+
+	_mat_shotgun = StandardMaterial3D.new()
+	_mat_shotgun.albedo_color = Color(0.85, 0.15, 0.15, 1.0) # Crimson 12-gauge hull
+	_mat_shotgun.metallic = 0.30
+	_mat_shotgun.roughness = 0.40
 
 	# Slender rifle casing (5.56 / .223 style)
 	_mesh_rifle = CylinderMesh.new()
@@ -65,6 +72,15 @@ func _create_resources() -> void:
 	_mesh_pistol.radial_segments = 8
 	_mesh_pistol.rings = 1
 	_mesh_pistol.material = _mat_brass
+
+	# Chunky 12-gauge shotgun shell
+	_mesh_shotgun = CylinderMesh.new()
+	_mesh_shotgun.top_radius = 0.0090
+	_mesh_shotgun.bottom_radius = 0.0095
+	_mesh_shotgun.height = 0.030
+	_mesh_shotgun.radial_segments = 8
+	_mesh_shotgun.rings = 1
+	_mesh_shotgun.material = _mat_shotgun
 
 
 func _initialize_pool() -> void:
@@ -85,7 +101,7 @@ func _initialize_pool() -> void:
 ## Ejects a shell casing from a world transform with dynamic impulse and tumbling.
 ## spawn_pos: World origin of weapon ejection port
 ## spawn_basis: World basis of weapon (for rightward/upward orientation)
-## casing_type: "rifle" or "pistol"
+## casing_type: "rifle", "pistol", or "shotgun"
 ## inherited_vel: Movement velocity of shooter
 func eject_casing(
 	spawn_pos: Vector3,
@@ -103,6 +119,8 @@ func eject_casing(
 	# Set appropriate geometry
 	if casing_type == "pistol":
 		slot.mesh_node.mesh = _mesh_pistol
+	elif casing_type == "shotgun":
+		slot.mesh_node.mesh = _mesh_shotgun
 	else:
 		slot.mesh_node.mesh = _mesh_rifle
 

@@ -5,4 +5,4 @@
 [node name="WeaponVisual" unique_id=608214700 instance=ExtResource("1_fps_gun")]
 
 [node name="tripo_node_e707be46" parent="." index="0" unique_id=244864558]
-transform = Transform3D(74.31448, -66.91306, -2.9248629e-06, 0, -4.371139e-06, 100, -66.91306, -74.31448, -3.2483892e-06, 0, 0, 0)
+transform = Transform3D(0.7431448, -0.6691306, 0, 0, 0, 1, -0.6691306, -0.7431448, 0, 0, 0, 0)

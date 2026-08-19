@@ -430,6 +430,95 @@ func hide_death() -> void:
 var _shield_label : Label = null
 var _shield_tween : Tween = null
 
+# Sniper Scope Overlay
+var _scope_overlay : Control = null
+
+
+## Displays or hides the procedural high-precision sniper scope overlay.
+func set_sniper_scope_visible(is_vis: bool) -> void:
+	if _scope_overlay == null and is_vis:
+		_create_sniper_scope_overlay()
+
+	if _scope_overlay and is_instance_valid(_scope_overlay):
+		_scope_overlay.visible = is_vis
+		if is_vis:
+			_scope_overlay.queue_redraw()
+
+
+func _create_sniper_scope_overlay() -> void:
+	var scope := Control.new()
+	scope.name = "SniperScopeOverlay"
+	scope.set_anchors_preset(Control.PRESET_FULL_RECT)
+	scope.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scope.z_index = 5
+	scope.resized.connect(func(): scope.queue_redraw())
+
+	# Connect custom draw method
+	scope.draw.connect(func():
+		var center := scope.size * 0.5
+		var radius := minf(scope.size.x, scope.size.y) * 0.38
+		if radius <= 10.0:
+			return
+
+		var max_dim := maxf(scope.size.x, scope.size.y)
+		var mask_col := Color(0.01, 0.02, 0.04, 0.98)
+
+		# 1. Solid rectangular perimeter bars outside lens bounding box
+		scope.draw_rect(Rect2(0, 0, scope.size.x, maxf(center.y - radius, 0.0)), mask_col)
+		scope.draw_rect(Rect2(0, center.y + radius, scope.size.x, maxf(scope.size.y - (center.y + radius), 0.0)), mask_col)
+		scope.draw_rect(Rect2(0, center.y - radius, maxf(center.x - radius, 0.0), radius * 2.0), mask_col)
+		scope.draw_rect(Rect2(center.x + radius, center.y - radius, maxf(scope.size.x - (center.x + radius), 0.0), radius * 2.0), mask_col)
+
+		# 2. Outer ring fill covering corners between bounding box and circle
+		var half_diag := max_dim * 0.75
+		scope.draw_arc(center, radius + (half_diag * 0.5), 0, TAU, 96, mask_col, half_diag, true)
+
+		# 3. Scope outer bezel rings
+		scope.draw_arc(center, radius + 2.0, 0, TAU, 96, Color(0.12, 0.14, 0.18, 1.0), 6.0, true)
+		scope.draw_arc(center, radius - 1.0, 0, TAU, 96, Color(0.04, 0.05, 0.07, 0.85), 3.0, true)
+
+		# 4. Crystal clear interior (faint subtle lens tint 0.02 alpha)
+		scope.draw_circle(center, radius - 2.0, Color(0.0, 0.4, 0.6, 0.02))
+
+		# 5. Fine precision reticle
+		var line_col := Color(0.95, 0.15, 0.15, 0.90)
+		var dark_line_col := Color(0.05, 0.05, 0.05, 0.60)
+		var center_gap := 12.0
+
+		# Shadow / backing for crosshair contrast against bright surfaces
+		scope.draw_line(Vector2(center.x - radius + 15, center.y), Vector2(center.x - center_gap, center.y), dark_line_col, 3.0)
+		scope.draw_line(Vector2(center.x + center_gap, center.y), Vector2(center.x + radius - 15, center.y), dark_line_col, 3.0)
+		scope.draw_line(Vector2(center.x, center.y - radius + 15), Vector2(center.x, center.y - center_gap), dark_line_col, 3.0)
+		scope.draw_line(Vector2(center.x, center.y + center_gap), Vector2(center.x, center.y + radius - 15), dark_line_col, 3.0)
+
+		# Crisp red crosshairs
+		scope.draw_line(Vector2(center.x - radius + 15, center.y), Vector2(center.x - center_gap, center.y), line_col, 1.5)
+		scope.draw_line(Vector2(center.x + center_gap, center.y), Vector2(center.x + radius - 15, center.y), line_col, 1.5)
+		scope.draw_line(Vector2(center.x, center.y - radius + 15), Vector2(center.x, center.y - center_gap), line_col, 1.5)
+		scope.draw_line(Vector2(center.x, center.y + center_gap), Vector2(center.x, center.y + radius - 15), line_col, 1.5)
+
+		# Mil-dot range hash marks
+		for i in range(1, 5):
+			var dist := i * (radius * 0.18)
+			if dist >= radius - 25.0:
+				break
+			var tick_h := 6.0 if i % 2 == 0 else 4.0
+
+			# Horizontal tick marks
+			scope.draw_line(Vector2(center.x - dist, center.y - tick_h), Vector2(center.x - dist, center.y + tick_h), line_col, 1.2)
+			scope.draw_line(Vector2(center.x + dist, center.y - tick_h), Vector2(center.x + dist, center.y + tick_h), line_col, 1.2)
+
+			# Vertical elevation drop tick marks
+			scope.draw_line(Vector2(center.x - tick_h, center.y - dist), Vector2(center.x + tick_h, center.y - dist), line_col, 1.2)
+			scope.draw_line(Vector2(center.x - tick_h, center.y + dist), Vector2(center.x + tick_h, center.y + dist), line_col, 1.2)
+
+		# Precision center dot
+		scope.draw_circle(center, 2.5, Color(1.0, 0.25, 0.25, 1.0))
+	)
+
+	_scope_overlay = scope
+	add_child(_scope_overlay)
+
 
 ## Displays temporary spawn protection badge near health bar.
 func show_spawn_protection(duration: float = 1.2) -> void:

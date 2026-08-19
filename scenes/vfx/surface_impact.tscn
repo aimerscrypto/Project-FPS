@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/surface_impact.gd" id="1_impact"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_spark"]
+radius = 0.12
+height = 0.24
+radial_segments = 8
+rings = 4
+
+[node name="SurfaceImpact" type="Node3D"]
+script = ExtResource("1_impact")
+
+[node name="SparkMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.05)
+mesh = SubResource("SphereMesh_spark")

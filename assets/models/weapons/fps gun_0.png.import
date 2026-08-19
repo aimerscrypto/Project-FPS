@@ -2,23 +2,24 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c2a07g3effkc5"
-path="res://.godot/imported/fps gun_3.png-0c1e85adffe8992236e968af31436cb1.ctex"
+uid="uid://ueeyyvrvkbrn"
+path.s3tc="res://.godot/imported/fps gun_0.png-b31674fed9378cfa01993bb4c90a424a.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
-"md5": "07eeec8b690653cf358736cba16996a0"
+"md5": "a700b98cf0349a98db8c6febf3b7e37d"
 }
 
 [deps]
 
-source_file="res://assets/models/player/fps gun_3.png"
-dest_files=["res://.godot/imported/fps gun_3.png-0c1e85adffe8992236e968af31436cb1.ctex"]
+source_file="res://assets/models/weapons/fps gun_0.png"
+dest_files=["res://.godot/imported/fps gun_0.png-b31674fed9378cfa01993bb4c90a424a.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +41,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

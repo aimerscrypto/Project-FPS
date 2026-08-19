@@ -28,9 +28,11 @@ class_name WeaponData
 # --- Reload ---
 @export var reload_time    : float = 2.0   # seconds to reload
 
-# --- Accuracy ---
-@export var spread_degrees : float = 0.5   # max cone half-angle in degrees (0 = perfect)
-@export var range_meters   : float = 100.0 # hitscan maximum range
+# --- Accuracy & Pellets ---
+@export var spread_degrees     : float = 0.5   # max cone half-angle in degrees (0 = perfect)
+@export var ads_spread_degrees : float = 0.1   # spread while aiming down sights
+@export var range_meters       : float = 100.0 # hitscan maximum range
+@export var pellet_count       : int   = 1     # number of hitscan pellets per shot (e.g. 8 for shotgun)
 
 # --- Recoil (applied to camera on each shot) ---
 @export var recoil_vertical   : float = 1.05  # degrees upward kick per shot
@@ -43,5 +45,8 @@ class_name WeaponData
 @export var reload_sound  : String = "ar_reload"
 
 # --- Presentation & FX Profiles ---
-@export var casing_type    : String = "rifle"   # "rifle" or "pistol"
-@export var reload_profile : String = "rifle"   # "rifle" or "pistol"
+@export var casing_type    : String = "rifle"   # "rifle", "pistol", or "shotgun"
+@export var reload_profile : String = "rifle"   # "rifle", "pistol", "shotgun", or "sniper"
+@export var is_sniper      : bool   = false
+@export var tracer_color   : Color  = Color(1.0, 0.85, 0.3, 0.9)
+@export var tracer_speed   : float  = 260.0

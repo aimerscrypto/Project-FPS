@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://bun6xcqx041b5"]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+weapon_name = "Sniper Rifle"
+damage = 85.0
+headshot_multiplier = 2.0
+fire_rate = 0.75
+is_automatic = false
+magazine_size = 5
+reserve_ammo = 20
+reload_time = 2.4
+spread_degrees = 5.0
+ads_spread_degrees = 0.05
+range_meters = 150.0
+pellet_count = 1
+recoil_vertical = 4.2
+recoil_horizontal = 0.6
+recoil_recovery = 4.0
+fire_sound = "sniper_fire"
+dryfire_sound = "sniper_dryfire"
+reload_sound = "sniper_reload"
+casing_type = "rifle"
+reload_profile = "sniper"
+is_sniper = true
+tracer_color = Color(0.25, 0.9, 1, 0.95)
+tracer_speed = 360.0

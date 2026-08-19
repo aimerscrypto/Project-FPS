@@ -1,7 +1,7 @@
 # Project FPS — Development Status
 
 **Last Updated:** 2026-08-18  
-**Current Milestone:** Milestone 14 — Playable Game Loop & Arena Gameplay Systems (COMPLETE & RUNTIME VERIFIED)
+**Current Milestone:** Milestone 15 — Full 5-Weapon Arsenal, Physical Spring Recoil, High-Performance Combat VFX, Spatial Audio & Stylized Arena Visual Polish (COMPLETE & RUNTIME VERIFIED)
 
 ---
 
@@ -340,5 +340,31 @@ project-fps/
     - Master Volume and SFX Volume sliders controlling Godot audio buses with linear-to-dB conversion.
     - "RESUME MATCH" and "RESTART MATCH" interactive buttons.
   - **Automated Verification Test Suite:**
-    - 24/24 tests in `test_milestone14_game_loop.gd` passing.
-    - **Total: 310 / 310 automated tests passing across all 8 project test suites (100% pass rate).**
+    - 26/26 tests in `test_milestone14_game_loop.gd` passing.
+- [x] **Milestone 15 (Full 5-Weapon Arsenal, Physical Spring Recoil, High-Performance Combat VFX, Spatial Audio & Stylized Arena Visual Polish):**
+  - **Complete 5-Weapon Arsenal (Game Bible Spec):**
+    - **Assault Rifle (Slot 1):** 25 dmg, 10 rps, 30 mag, 120 reserve, 2.0s reload, automatic, balanced general-purpose rifle.
+    - **SMG (Slot 2):** 18 dmg, 15 rps, 35 mag, 140 reserve, 1.5s reload, automatic, high fire-rate CQC shredder.
+    - **Shotgun (Slot 3):** Pump-action, 8 pellets $\times$ 12 dmg (96 max body damage, 1.5x headshot = 144 max headshot dmg), 1.1 rps, 6-shell tubular magazine, 36 reserve, 2.2s reload, 3.8° spread cone. Crimson 12-gauge shell casing profile.
+    - **Sniper Rifle (Slot 4):** Bolt-action, 85 base dmg, 2.0x headshot = 170 lethal headshot dmg, 0.75 rps, 5-round magazine, 20 reserve, 2.4s reload, 5.0° hipfire spread, 0.05° pinpoint ADS spread.
+    - **Pistol (Slot 5):** Semi-auto sidearm, 35 dmg, 2.0x headshot, 5 rps, 12 mag, 48 reserve, 1.4s reload.
+    - Hotkeys `1`, `2`, `3`, `4`, `5` and scroll wheel weapon cycling seamlessly across all 5 slots.
+  - **Damped Harmonic Spring-Mass Recoil Dynamics:**
+    - Second-order physical spring-damper system ($k=260, c=24, m=1$) replacing simple linear recovery.
+    - Velocity kick impulses on shooting create tactile mechanical kick with natural overshoot and settling.
+  - **Zero-Allocation Pooled Combat VFX (`VFXManager`):**
+    - `BulletTracer` (32 pooled slots): High-speed ballistic 3D tracer streaks with customizable speed and weapon-specific coloration.
+    - `SurfaceImpact` (24 pooled slots): 3D normal-aligned impact sparks and dust puffs on world collisions.
+    - `EliminationBurst` (12 pooled slots): Dynamic stylized 3D voxel shatter burst on bot elimination.
+  - **Spatial Movement Audio & Sound Expansion (`AudioManager`):**
+    - Stride-based footstep cadence dynamically scaling with velocity for Walking (2.4m), Sprinting (2.8m), and Crouching (1.6m).
+    - Dedicated Jump Launch and Land Impact sound synthesis and dispatch.
+    - 3D spatial footsteps for bots with distance-based attenuation.
+    - Sound profiles and synthesis for Shotgun fire/pump/reload and Sniper fire/bolt/reload.
+  - **Stylized Competitive Arena Visual Polish:**
+    - High-contrast competitive arena materials (dark slate floor, amber side decks, cobalt catwalk, cyan underpass).
+    - Vibrant skybox palette and ACES filmic tonemapping with tuned exposure.
+    - Stylized Sniper Scope HUD overlay with custom reticle and peripheral masking.
+  - **Automated Verification Test Suite:**
+    - 88/88 tests in `test_milestone15_audio_vfx_weapons.gd` passing.
+    - **Total: 400 / 400 automated tests passing across all 9 milestone test suites (100% pass rate).**

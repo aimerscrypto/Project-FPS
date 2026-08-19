@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/weapons/pistol.glb" id="1_pistol_glb"]
+
+[node name="WeaponVisual" instance=ExtResource("1_pistol_glb")]
+
+[node name="tripo_node_a7a57ddb-fe76-4930-ad5f-45db16103c51" parent="." index="0"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0)

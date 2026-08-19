@@ -117,12 +117,15 @@ const LOOK_SWAY_LERP_SPEED : float = 10.0
 const MAX_LOOK_SWAY_ROT    : float = 0.045  # ~2.6 deg max look lag
 const MAX_LOOK_SWAY_POS    : float = 0.006  # 6 mm max look offset
 
-# 6. Procedural Firing Kick (Viewmodel Physical Recoil Punch)
-const KICK_POS_IMPULSE      : Vector3 = Vector3(0.0008, 0.0020, 0.0160)  # per-shot translation kick (16mm backward punch)
-const KICK_ROT_IMPULSE      : Vector3 = Vector3(0.0450, 0.0030, 0.0060)  # per-shot rotation kick (~2.58° pitch up)
-const KICK_POS_MAX          : Vector3 = Vector3(0.0040, 0.0080, 0.0340)  # max accumulated kick translation in full auto
-const KICK_ROT_MAX          : Vector3 = Vector3(0.0850, 0.0120, 0.0200)  # max accumulated kick rotation (~4.87°)
-const KICK_LERP_SPEED       : float   = 18.0                              # smooth kick recovery rate toward rest
+# 6. Procedural Firing Kick (Physical Spring-Mass-Damper Recoil)
+const SPRING_STIFFNESS : float = 260.0
+const SPRING_DAMPING   : float = 24.0
+const SPRING_MASS      : float = 1.0
+
+var _spring_pos        : Vector3 = Vector3.ZERO
+var _spring_pos_vel    : Vector3 = Vector3.ZERO
+var _spring_rot        : Vector3 = Vector3.ZERO
+var _spring_rot_vel    : Vector3 = Vector3.ZERO
 
 # 7. Viewmodel Mechanical Firing Vibration (Subtle High-Frequency Buzz)
 const VIBRATION_POS_MAG     : Vector3 = Vector3(0.0006, 0.0005, 0.0010)  # 0.6mm X, 0.5mm Y, 1.0mm Z mechanical vibration
@@ -152,7 +155,28 @@ const RELOAD_KEYFRAMES_PISTOL : Array[Dictionary] = [
 	{ "t": 0.50, "pos": Vector3(0.004, -0.030,  0.008), "rot": Vector3(0.030,  0.035,  0.090) }, # Mag slap into grip base
 	{ "t": 0.60, "pos": Vector3(0.008, -0.045,  0.016), "rot": Vector3(-0.015,  0.050,  0.110) }, # Rebound from slap
 	{ "t": 0.72, "pos": Vector3(0.002, -0.022,  0.020), "rot": Vector3(0.020,  0.020,  0.040) }, # Thumb slide release snap
-	{ "t": 0.84, "pos": Vector3(-0.001, -0.008, 0.003), "rot": Vector3(-0.008, -0.008,  0.010) }, # Settle overshoot
+	{ "t": 0.84, "pos": Vector3(-0.001, -0.008, 0.003), "rot": Vector3(-0.080, -0.008,  0.010) }, # Settle overshoot
+	{ "t": 1.00, "pos": Vector3(0.000,  0.000,  0.000), "rot": Vector3(0.000,  0.000,  0.000) }, # Rest
+]
+
+# Shotgun reload keyframes (shell insertion cycle & pump rack)
+const RELOAD_KEYFRAMES_SHOTGUN : Array[Dictionary] = [
+	{ "t": 0.00, "pos": Vector3(0.000,  0.000,  0.000), "rot": Vector3(0.000,  0.000,  0.000) },
+	{ "t": 0.20, "pos": Vector3(0.010, -0.060,  0.020), "rot": Vector3(-0.080, -0.080,  0.220) }, # Tilt up to expose tube
+	{ "t": 0.42, "pos": Vector3(0.005, -0.040,  0.010), "rot": Vector3(0.020, -0.040,  0.150) }, # Shell insert click
+	{ "t": 0.60, "pos": Vector3(0.005, -0.040,  0.010), "rot": Vector3(0.020, -0.040,  0.150) }, # Second shell insert
+	{ "t": 0.78, "pos": Vector3(0.004, -0.050,  0.045), "rot": Vector3(0.040, -0.020,  0.060) }, # Pump slide pull back
+	{ "t": 0.88, "pos": Vector3(0.001, -0.020, -0.005), "rot": Vector3(-0.020, -0.010,  0.020) }, # Pump slide forward slam
+	{ "t": 1.00, "pos": Vector3(0.000,  0.000,  0.000), "rot": Vector3(0.000,  0.000,  0.000) }, # Rest
+]
+
+# Sniper rifle reload keyframes (heavy magazine swap & bolt rack)
+const RELOAD_KEYFRAMES_SNIPER : Array[Dictionary] = [
+	{ "t": 0.00, "pos": Vector3(0.000,  0.000,  0.000), "rot": Vector3(0.000,  0.000,  0.000) },
+	{ "t": 0.22, "pos": Vector3(0.015, -0.095,  0.030), "rot": Vector3(-0.100, -0.120,  0.220) }, # Heavy tilt & mag unseat
+	{ "t": 0.50, "pos": Vector3(0.008, -0.060,  0.015), "rot": Vector3(0.050, -0.050,  0.150) }, # Mag slap in
+	{ "t": 0.72, "pos": Vector3(0.005, -0.045,  0.050), "rot": Vector3(0.030, -0.020,  0.080) }, # Bolt handle pull back
+	{ "t": 0.84, "pos": Vector3(0.002, -0.025,  0.005), "rot": Vector3(-0.020, -0.010,  0.020) }, # Bolt lock forward
 	{ "t": 1.00, "pos": Vector3(0.000,  0.000,  0.000), "rot": Vector3(0.000,  0.000,  0.000) }, # Rest
 ]
 
@@ -274,6 +298,8 @@ func _process(delta: float) -> void:
 func equip() -> void:
 	visible = true
 	set_process(true)
+	if is_instance_valid(_weapon_visual):
+		_weapon_visual.visible = true
 	_equip_timer = EQUIP_DURATION
 	_has_last_cam_rot = false
 	_current_kick_pos = Vector3.ZERO
@@ -415,24 +441,24 @@ func _fire() -> void:
 	# Recoil (Camera recoil)
 	_apply_recoil()
 
-	# Procedural weapon kick (Viewmodel recoil punch)
-	var kick_x_rnd : float = randf_range(-0.0006, 0.0006)
-	var kick_y_rnd : float = randf_range(0.0015, 0.0025)
-	var kick_z_rnd : float = randf_range(0.0140, 0.0175)
-	var kick_pos_step := Vector3(kick_x_rnd, kick_y_rnd, kick_z_rnd)
+	# Procedural physical spring kick impulse
+	var is_multi : bool = data != null and data.pellet_count > 1
+	var is_high_cal : bool = data != null and (data.is_sniper or data.damage >= 50.0)
+	var mult : float = 2.0 if is_multi else (1.8 if is_high_cal else 1.0)
 
-	var kick_rot_x_rnd : float = randf_range(0.038, 0.048)
-	var kick_rot_y_rnd : float = randf_range(-0.004, 0.004)
-	var kick_rot_z_rnd : float = randf_range(-0.007, 0.007)
-	var kick_rot_step := Vector3(kick_rot_x_rnd, kick_rot_y_rnd, kick_rot_z_rnd)
-
-	_current_kick_pos.x = clampf(_current_kick_pos.x + kick_pos_step.x, -KICK_POS_MAX.x, KICK_POS_MAX.x)
-	_current_kick_pos.y = clampf(_current_kick_pos.y + kick_pos_step.y, -KICK_POS_MAX.y, KICK_POS_MAX.y)
-	_current_kick_pos.z = clampf(_current_kick_pos.z + kick_pos_step.z, 0.0, KICK_POS_MAX.z)
-
-	_current_kick_rot.x = clampf(_current_kick_rot.x + kick_rot_step.x, -KICK_ROT_MAX.x, KICK_ROT_MAX.x)
-	_current_kick_rot.y = clampf(_current_kick_rot.y + kick_rot_step.y, -KICK_ROT_MAX.y, KICK_ROT_MAX.y)
-	_current_kick_rot.z = clampf(_current_kick_rot.z + kick_rot_step.z, -KICK_ROT_MAX.z, KICK_ROT_MAX.z)
+	var impulse_pos := Vector3(
+		randf_range(-0.001, 0.001),
+		randf_range(0.002, 0.004) * mult,
+		randf_range(0.016, 0.022) * mult
+	)
+	var impulse_rot := Vector3(
+		randf_range(0.045, 0.065) * mult,
+		randf_range(-0.006, 0.006) * mult,
+		randf_range(-0.010, 0.010) * mult
+	)
+	_spring_pos_vel += impulse_pos * 35.0
+	_spring_rot_vel += impulse_rot * 35.0
+	_current_kick_pos += impulse_pos
 
 	# Trigger viewmodel mechanical firing vibration
 	_vibration_trauma = 1.0
@@ -457,8 +483,9 @@ func _dry_fire() -> void:
 	AudioManager.play_2d(snd_dry, AudioManager.BUS_SFX, -2.0, 0.03)
 
 	# Subtle visual trigger click kick
-	_current_kick_pos.z = clampf(_current_kick_pos.z + 0.0035, 0.0, KICK_POS_MAX.z)
-	_current_kick_rot.x = clampf(_current_kick_rot.x + 0.010, -KICK_ROT_MAX.x, KICK_ROT_MAX.x)
+	_spring_pos_vel += Vector3(0.0, 0.001, 0.006) * 20.0
+	_spring_rot_vel += Vector3(0.012, 0.0, 0.0) * 20.0
+	_current_kick_pos += Vector3(0.0, 0.001, 0.006)
 
 	# Limit dry-fire spam messaging.
 	print("[Weapon] DRY FIRE — magazine empty. Press R to reload.")
@@ -469,83 +496,117 @@ func _dry_fire() -> void:
 # HITSCAN
 # =============================================================================
 func _do_hitscan() -> void:
-	# Apply spread before casting.
-	var spread_rad : float = deg_to_rad(data.spread_degrees)
-	var offset_x   : float = randf_range(-spread_rad, spread_rad)
-	var offset_y   : float = randf_range(-spread_rad, spread_rad)
-	# Target position in local space (forward = -Z for Camera3D).
-	var base_target := Vector3(offset_x, offset_y, -data.range_meters)
-	_raycast.target_position = base_target
+	var pellets : int = data.pellet_count if (data and data.pellet_count > 0) else 1
+	var is_aim : bool = _is_aiming
+	var spread_deg : float = data.ads_spread_degrees if is_aim else data.spread_degrees
+	var spread_rad : float = deg_to_rad(spread_deg)
 
-	# Force update so result is available immediately this frame.
-	_raycast.force_raycast_update()
+	var muzzle_pos : Vector3 = global_position
+	if is_instance_valid(_muzzle_flash):
+		muzzle_pos = _muzzle_flash.global_position
 
-	if _raycast.is_colliding():
-		var hit_point    := _raycast.get_collision_point()
-		var hit_normal   := _raycast.get_collision_normal()
-		var hit_collider := _raycast.get_collider()
-		var hit_name     : String = str(hit_collider.name) if hit_collider else "unknown"
+	var hit_targets : Dictionary = {}
+	var vfx = get_node_or_null("/root/VFXManager")
+	var tr_color : Color = data.tracer_color if data else Color(1.0, 0.85, 0.3)
+	var tr_speed : float = data.tracer_speed if data else 260.0
 
-		print("[HIT] Object: %s | Point: %s | Normal: %s" % [
-			hit_name,
-			str(hit_point.snapped(Vector3(0.01, 0.01, 0.01))),
-			str(hit_normal.snapped(Vector3(0.01, 0.01, 0.01)))
-		])
+	for p in range(pellets):
+		var theta : float = randf() * TAU
+		var r : float = sqrt(randf()) * spread_rad
+		var offset_x : float = cos(theta) * r
+		var offset_y : float = sin(theta) * r
+		var target_local := Vector3(offset_x, offset_y, -data.range_meters)
+		_raycast.target_position = target_local
+		_raycast.force_raycast_update()
 
-		# Check whether hit object or its parent is damageable
-		if hit_collider:
-			var dmg_info := DamageInfo.new()
-			dmg_info.amount = data.damage
-			dmg_info.headshot_multiplier = data.headshot_multiplier
-			dmg_info.attacker = _player
-			dmg_info.hit_position = hit_point
-			dmg_info.hit_normal = hit_normal
-			dmg_info.hit_direction = (_raycast.global_transform.basis * _raycast.target_position).normalized()
-			dmg_info.hit_type = DamageInfo.HitType.BODY
-			if hit_collider.is_in_group("head"):
-				dmg_info.hit_type = DamageInfo.HitType.HEAD
+		if _raycast.is_colliding():
+			var hit_point    := _raycast.get_collision_point()
+			var hit_normal   := _raycast.get_collision_normal()
+			var hit_collider := _raycast.get_collider()
 
-			# Check target health before dealing damage to determine if this is a kill
-			var target_health_node : Health = null
-			if hit_collider is Health:
-				target_health_node = hit_collider
-			elif hit_collider.has_node("Health"):
-				target_health_node = hit_collider.get_node("Health") as Health
-			elif hit_collider.get_parent() and hit_collider.get_parent().has_node("Health"):
-				target_health_node = hit_collider.get_parent().get_node("Health") as Health
+			# Visual bullet tracer
+			if vfx and vfx.has_method("spawn_tracer"):
+				vfx.spawn_tracer(muzzle_pos, hit_point, tr_color, tr_speed)
 
-			var final_damage : float = dmg_info.get_final_damage()
-			var is_kill : bool = false
-			if target_health_node and not target_health_node.is_dead and target_health_node.current_health > 0.0:
-				if target_health_node.current_health - final_damage <= 0.0:
-					is_kill = true
+			if hit_collider:
+				var is_head : bool = hit_collider.is_in_group("head")
+				var mult : float = data.headshot_multiplier if is_head else 1.0
+				var p_dmg : float = data.damage * mult
 
-			# Dispatch damage cleanly through damageable interface
-			var did_damage : bool = false
-			if hit_collider.has_method("take_damage"):
-				hit_collider.take_damage(dmg_info)
-				did_damage = true
-			elif target_health_node and target_health_node.has_method("take_damage"):
-				target_health_node.take_damage(dmg_info)
-				did_damage = true
-			elif hit_collider.get_parent() and hit_collider.get_parent().has_method("take_damage"):
-				hit_collider.get_parent().take_damage(dmg_info)
-				did_damage = true
+				var recipient : Node = hit_collider
+				if not recipient.has_method("take_damage") and recipient.get_parent() and recipient.get_parent().has_method("take_damage"):
+					recipient = recipient.get_parent()
 
-			if did_damage:
-				var is_headshot : bool = (dmg_info.hit_type == DamageInfo.HitType.HEAD)
-				if is_kill:
-					AudioManager.play_kill_confirm(is_headshot)
-				else:
-					AudioManager.play_hitmarker(is_headshot)
-				target_hit.emit(is_headshot, is_kill)
+				if not hit_targets.has(recipient):
+					hit_targets[recipient] = {
+						"damage": 0.0,
+						"headshots": 0,
+						"hits": 0,
+						"last_point": hit_point,
+						"last_normal": hit_normal,
+						"last_type": DamageInfo.HitType.HEAD if is_head else DamageInfo.HitType.BODY
+					}
+				hit_targets[recipient]["damage"] += p_dmg
+				hit_targets[recipient]["hits"] += 1
+				if is_head:
+					hit_targets[recipient]["headshots"] += 1
 
+				# Spawn surface impact on non-combatants
+				if not recipient.is_in_group("combatants"):
+					if vfx and vfx.has_method("spawn_impact"):
+						vfx.spawn_impact(hit_point, hit_normal)
+					AudioManager.play_3d("impact", hit_point, AudioManager.BUS_SFX, -2.0, 0.06, 40.0, 4.0)
+		else:
+			# Missed tracer
+			var miss_end : Vector3 = _raycast.global_transform * target_local
+			if vfx and vfx.has_method("spawn_tracer"):
+				vfx.spawn_tracer(muzzle_pos, miss_end, tr_color, tr_speed)
 
-		# Spawn 3D impact audio & visual marker at hit point
-		AudioManager.play_3d("impact", hit_point, AudioManager.BUS_SFX, -2.0, 0.06, 40.0, 4.0)
-		_spawn_impact_marker(hit_point, hit_normal)
-	else:
-		print("[HIT] No collision detected.")
+	# Aggregate damage dispatch
+	var any_hit : bool = false
+	var had_headshot : bool = false
+	var had_kill : bool = false
+
+	for target in hit_targets:
+		var info_dict : Dictionary = hit_targets[target]
+		var dmg_info := DamageInfo.new()
+		dmg_info.amount = info_dict["damage"]
+		dmg_info.headshot_multiplier = 1.0
+		dmg_info.attacker = _player
+		dmg_info.hit_position = info_dict["last_point"]
+		dmg_info.hit_normal = info_dict["last_normal"]
+		dmg_info.hit_direction = (_raycast.global_transform.basis * _raycast.target_position).normalized()
+		dmg_info.hit_type = info_dict["last_type"]
+
+		var is_head : bool = info_dict["headshots"] > 0
+		if is_head:
+			had_headshot = true
+
+		var target_health : Health = null
+		if target is Health:
+			target_health = target
+		elif target.has_node("Health"):
+			target_health = target.get_node("Health") as Health
+
+		var _is_kill : bool = false
+		if target_health and not target_health.is_dead and target_health.current_health > 0.0:
+			if target_health.current_health - dmg_info.amount <= 0.0:
+				_is_kill = true
+				had_kill = true
+
+		if target.has_method("take_damage"):
+			target.take_damage(dmg_info)
+			any_hit = true
+		elif target_health and target_health.has_method("take_damage"):
+			target_health.take_damage(dmg_info)
+			any_hit = true
+
+	if any_hit:
+		if had_kill:
+			AudioManager.play_kill_confirm(had_headshot)
+		else:
+			AudioManager.play_hitmarker(had_headshot)
+		target_hit.emit(had_headshot, had_kill)
 
 
 func _spawn_impact_marker(point: Vector3, normal: Vector3) -> void:
@@ -668,7 +729,18 @@ func get_ammo_info() -> Dictionary:
 ## Evaluates procedural reload keyframes across normalized progress [0.0, 1.0] using smoothstep blending.
 func _sample_reload_pose(p: float) -> Dictionary:
 	var clamped_p : float = clampf(p, 0.0, 1.0)
-	var keyframes : Array[Dictionary] = RELOAD_KEYFRAMES_PISTOL if (data and data.reload_profile == "pistol") else RELOAD_KEYFRAMES_RIFLE
+	var keyframes : Array[Dictionary] = RELOAD_KEYFRAMES_RIFLE
+	if data:
+		match data.reload_profile:
+			"pistol":
+				keyframes = RELOAD_KEYFRAMES_PISTOL
+			"shotgun":
+				keyframes = RELOAD_KEYFRAMES_SHOTGUN
+			"sniper":
+				keyframes = RELOAD_KEYFRAMES_SNIPER
+			_:
+				keyframes = RELOAD_KEYFRAMES_RIFLE
+
 	for i in range(keyframes.size() - 1):
 		var k0 : Dictionary = keyframes[i]
 		var k1 : Dictionary = keyframes[i + 1]
@@ -803,9 +875,17 @@ func _update_weapon_motion(delta: float) -> void:
 	_current_look_sway_pos = _current_look_sway_pos.lerp(target_look_pos, LOOK_SWAY_LERP_SPEED * delta)
 	_current_look_sway_rot = _current_look_sway_rot.lerp(target_look_rot, LOOK_SWAY_LERP_SPEED * delta)
 
-	# 7. Procedural Firing Kick Decay
-	_current_kick_pos = _current_kick_pos.lerp(Vector3.ZERO, KICK_LERP_SPEED * delta)
-	_current_kick_rot = _current_kick_rot.lerp(Vector3.ZERO, KICK_LERP_SPEED * delta)
+	# 7. Procedural Spring-Mass-Damper Recoil Oscillation & Decay
+	var f_pos := -SPRING_STIFFNESS * _spring_pos - SPRING_DAMPING * _spring_pos_vel
+	_spring_pos_vel += (f_pos / SPRING_MASS) * delta
+	_spring_pos += _spring_pos_vel * delta
+
+	var f_rot := -SPRING_STIFFNESS * _spring_rot - SPRING_DAMPING * _spring_rot_vel
+	_spring_rot_vel += (f_rot / SPRING_MASS) * delta
+	_spring_rot += _spring_rot_vel * delta
+
+	_current_kick_pos = _spring_pos
+	_current_kick_rot = _spring_rot
 
 	# 8. Viewmodel Firing Vibration Calculation
 	_vibration_trauma = lerpf(_vibration_trauma, 0.0, VIBRATION_DECAY * delta)

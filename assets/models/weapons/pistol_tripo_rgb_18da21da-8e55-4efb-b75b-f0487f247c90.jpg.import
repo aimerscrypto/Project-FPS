@@ -2,23 +2,24 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://6y3qd6t8ra5v"
-path="res://.godot/imported/fps gun_2.png-b298f35af6a205d627ed1f8f8d13a92d.ctex"
+uid="uid://bypda4rd3hbi6"
+path.s3tc="res://.godot/imported/pistol_tripo_rgb_18da21da-8e55-4efb-b75b-f0487f247c90.jpg-73e032b9665c8b453a347a5c2728f080.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
-"md5": "502ccec710de165a1b994e81f7bf0878"
+"md5": "3367c133624eedbb21cbcedb5524c5e3"
 }
 
 [deps]
 
-source_file="res://assets/models/player/fps gun_2.png"
-dest_files=["res://.godot/imported/fps gun_2.png-b298f35af6a205d627ed1f8f8d13a92d.ctex"]
+source_file="res://assets/models/weapons/pistol_tripo_rgb_18da21da-8e55-4efb-b75b-f0487f247c90.jpg"
+dest_files=["res://.godot/imported/pistol_tripo_rgb_18da21da-8e55-4efb-b75b-f0487f247c90.jpg-73e032b9665c8b453a347a5c2728f080.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +41,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

@@ -32,10 +32,23 @@ const SOUND_PATHS : Dictionary = {
 	"pistol_dryfire": "res://assets/audio/weapons/pistol_dryfire.wav",
 	"pistol_reload": "res://assets/audio/weapons/pistol_reload.wav",
 	"smg_fire": "res://assets/audio/weapons/smg_fire.wav",
-	# Player
+	"shotgun_fire": "res://assets/audio/weapons/shotgun_fire.wav",
+	"shotgun_pump": "res://assets/audio/weapons/shotgun_pump.wav",
+	"shotgun_dryfire": "res://assets/audio/weapons/shotgun_dryfire.wav",
+	"shotgun_reload": "res://assets/audio/weapons/shotgun_reload.wav",
+	"sniper_fire": "res://assets/audio/weapons/sniper_fire.wav",
+	"sniper_bolt": "res://assets/audio/weapons/sniper_bolt.wav",
+	"sniper_dryfire": "res://assets/audio/weapons/sniper_dryfire.wav",
+	"sniper_reload": "res://assets/audio/weapons/sniper_reload.wav",
+	# Player & Movement
 	"footstep": "res://assets/audio/player/footstep.wav",
+	"footstep_walk": "res://assets/audio/player/footstep_walk.wav",
+	"footstep_sprint": "res://assets/audio/player/footstep_sprint.wav",
+	"footstep_crouch": "res://assets/audio/player/footstep_crouch.wav",
 	"jump": "res://assets/audio/player/jump.wav",
+	"jump_launch": "res://assets/audio/player/jump_launch.wav",
 	"land": "res://assets/audio/player/land.wav",
+	"land_impact": "res://assets/audio/player/land_impact.wav",
 	"slide": "res://assets/audio/player/slide.wav",
 	"player_damage": "res://assets/audio/player/player_damage.wav",
 	"player_death": "res://assets/audio/player/player_death.wav",
@@ -175,6 +188,99 @@ func _generate_synthetic_sound(key: String) -> AudioStreamWAV:
 				var env : float = pow(1.0 - (float(i) / float(count)), 0.7)
 				var c : float = sin(t * TAU * 587.33) * 0.35 + sin(t * TAU * 739.99) * 0.35 + sin(t * TAU * 880.00) * 0.30
 				samples[i] = c * env * 0.75
+		"footstep_walk", "footstep":
+			var count : int = int(rate * 0.06) # 60ms subtle grounded thump
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = pow(1.0 - (float(i) / float(count)), 2.0)
+				var noise : float = randf_range(-0.25, 0.25)
+				var thump : float = sin(t * TAU * 120.0) * 0.5
+				samples[i] = (thump + noise) * env * 0.45
+		"footstep_sprint":
+			var count : int = int(rate * 0.05) # 50ms snappier sprint step
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = pow(1.0 - (float(i) / float(count)), 2.5)
+				var noise : float = randf_range(-0.35, 0.35)
+				var thump : float = sin(t * TAU * 150.0) * 0.6
+				samples[i] = (thump + noise) * env * 0.65
+		"footstep_crouch":
+			var count : int = int(rate * 0.07) # 70ms very quiet muffled step
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = 1.0 - (float(i) / float(count))
+				var thump : float = sin(t * TAU * 90.0) * 0.25
+				samples[i] = thump * env * 0.25
+		"jump_launch", "jump":
+			var count : int = int(rate * 0.09) # 90ms whoosh / rise
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = sin((float(i) / float(count)) * PI)
+				var freq : float = 110.0 + (float(i) / float(count)) * 260.0
+				samples[i] = sin(t * TAU * freq) * env * 0.5
+		"land_impact", "land":
+			var count : int = int(rate * 0.12) # 120ms deep impact thud
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = pow(1.0 - (float(i) / float(count)), 2.0)
+				var noise : float = randf_range(-0.3, 0.3)
+				var punch : float = sin(t * TAU * (85.0 * (1.0 - t * 4.0))) * 0.7
+				samples[i] = (punch + noise) * env * 0.7
+		"shotgun_fire":
+			var count : int = int(rate * 0.22) # 220ms heavy explosive burst
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = pow(1.0 - (float(i) / float(count)), 2.5)
+				var noise : float = randf_range(-0.7, 0.7)
+				var sub : float = sin(t * TAU * (80.0 * (1.0 - t * 3.0))) * 0.8
+				samples[i] = (sub + noise) * env * 0.9
+		"shotgun_pump":
+			var count : int = int(rate * 0.18) # 180ms slide mechanical clack
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = 1.0 - (float(i) / float(count))
+				var c1 : float = sin(t * TAU * 950.0) if (t < 0.05) else 0.0
+				var c2 : float = sin(t * TAU * 1250.0) if (t > 0.09 and t < 0.15) else 0.0
+				samples[i] = (c1 + c2) * env * 0.6
+		"shotgun_dryfire", "shotgun_reload":
+			var count : int = int(rate * 0.08)
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = 1.0 - (float(i) / float(count))
+				samples[i] = sin(t * TAU * 1100.0) * env * 0.5
+		"sniper_fire":
+			var count : int = int(rate * 0.32) # 320ms powerful high-caliber crack and boom
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = pow(1.0 - (float(i) / float(count)), 2.0)
+				var crack : float = randf_range(-0.8, 0.8) if (t < 0.06) else 0.0
+				var boom : float = sin(t * TAU * (65.0 * (1.0 - t * 2.0))) * 0.85
+				samples[i] = (crack + boom) * env * 0.95
+		"sniper_bolt":
+			var count : int = int(rate * 0.24) # 240ms bolt open-and-close rack
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = 1.0 - (float(i) / float(count))
+				var r1 : float = sin(t * TAU * 800.0) if (t < 0.07) else 0.0
+				var r2 : float = sin(t * TAU * 1400.0) if (t > 0.12 and t < 0.20) else 0.0
+				samples[i] = (r1 + r2) * env * 0.65
+		"sniper_dryfire", "sniper_reload":
+			var count : int = int(rate * 0.09)
+			samples.resize(count)
+			for i in range(count):
+				var t : float = float(i) / float(rate)
+				var env : float = 1.0 - (float(i) / float(count))
+				samples[i] = sin(t * TAU * 900.0) * env * 0.55
 		"ui_click":
 			var count : int = int(rate * 0.03) # 30ms click
 			samples.resize(count)

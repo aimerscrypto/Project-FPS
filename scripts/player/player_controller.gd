@@ -59,9 +59,11 @@ const HEIGHT_LERP_SPEED : float = 12.0   # how fast the capsule shrinks/grows
 @onready var _combat_hud   : CanvasLayer     = $CombatHUD
 @onready var _crosshair_hud : CanvasLayer     = find_child("CrosshairHUD", true, false)
 
-# Weapon references & inventory slots (Slot 0 = Assault Rifle, Slot 1 = SMG, Slot 2 = Pistol)
+# Weapon references & inventory slots (Slot 0 = AR, Slot 1 = SMG, Slot 2 = Shotgun, Slot 3 = Sniper, Slot 4 = Pistol)
 @onready var _weapon_primary   : Node3D = find_child("AssaultRifle", true, false)
 @onready var _weapon_smg       : Node3D = find_child("SMG", true, false)
+@onready var _weapon_shotgun   : Node3D = find_child("Shotgun", true, false)
+@onready var _weapon_sniper    : Node3D = find_child("Sniper", true, false)
 @onready var _weapon_secondary : Node3D = find_child("Pistol", true, false)
 
 var _weapons           : Array[Node3D] = []
@@ -148,12 +150,16 @@ func _ready() -> void:
 		_health.spawn_protection_started.connect(_on_spawn_protection_started)
 		_health.spawn_protection_ended.connect(_on_spawn_protection_ended)
 
-	# Register weapons in inventory slots (Slot 0 = AR, Slot 1 = SMG, Slot 2 = Pistol)
+	# Register weapons in inventory slots (Slot 0 = AR, Slot 1 = SMG, Slot 2 = Shotgun, Slot 3 = Sniper, Slot 4 = Pistol)
 	_weapons.clear()
 	if is_instance_valid(_weapon_primary):
 		_weapons.append(_weapon_primary)
 	if is_instance_valid(_weapon_smg):
 		_weapons.append(_weapon_smg)
+	if is_instance_valid(_weapon_shotgun):
+		_weapons.append(_weapon_shotgun)
+	if is_instance_valid(_weapon_sniper):
+		_weapons.append(_weapon_sniper)
 	if is_instance_valid(_weapon_secondary):
 		_weapons.append(_weapon_secondary)
 
@@ -522,6 +528,10 @@ func _process(delta: float) -> void:
 		switch_weapon(1)
 	elif Input.is_action_just_pressed("weapon_slot_3"):
 		switch_weapon(2)
+	elif Input.is_action_just_pressed("weapon_slot_4"):
+		switch_weapon(3)
+	elif Input.is_action_just_pressed("weapon_slot_5"):
+		switch_weapon(4)
 	elif Input.is_action_just_pressed("weapon_next"):
 		if _weapons.size() > 1:
 			switch_weapon((_active_slot_index + 1) % _weapons.size())
@@ -536,9 +546,27 @@ func _process(delta: float) -> void:
 	_is_aiming = wants_aim
 	_ads_weight = lerpf(_ads_weight, 1.0 if _is_aiming else 0.0, ADS_LERP_SPEED * delta)
 
-	# Smooth camera FOV zoom while aiming
+	var is_sniper_active : bool = (_active_weapon != null and is_instance_valid(_active_weapon) and _active_weapon.get("data") != null and _active_weapon.data.get("is_sniper") == true)
+	var target_ads_fov : float = 34.0 if is_sniper_active else ADS_FOV
+
+	# Smooth camera FOV zoom while aiming (high magnification for sniper)
 	if _camera:
-		_camera.fov = lerpf(_base_fov, ADS_FOV, _ads_weight)
+		_camera.fov = lerpf(_base_fov, target_ads_fov, _ads_weight)
+
+	# Hipfire crosshair fade during ADS
+	if _crosshair_hud:
+		var cross_ctrl = _crosshair_hud.get_node_or_null("CrosshairControl")
+		if cross_ctrl:
+			cross_ctrl.modulate.a = clampf(1.0 - _ads_weight * 1.5, 0.0, 1.0)
+
+	# Sniper Scope overlay handling & viewmodel optic clearance
+	if _combat_hud and _combat_hud.has_method("set_sniper_scope_visible"):
+		var show_scope : bool = is_sniper_active and _is_aiming and _ads_weight > 0.55
+		_combat_hud.set_sniper_scope_visible(show_scope)
+		if is_sniper_active and _active_weapon and is_instance_valid(_active_weapon):
+			var visual = _active_weapon.get_node_or_null("WeaponVisual")
+			if visual:
+				visual.visible = not (_is_aiming and _ads_weight > 0.65)
 
 	if _active_weapon == null or not is_instance_valid(_active_weapon):
 		return
@@ -665,7 +693,7 @@ func _handle_movement(delta: float) -> void:
 		# Landing — end any air state and trigger audio
 		if _state == MoveState.AIR:
 			_state = MoveState.WALK
-			AudioManager.play_2d("land", AudioManager.BUS_SFX, -2.0, 0.05)
+			AudioManager.play_2d("land_impact", AudioManager.BUS_SFX, -2.0, 0.05)
 		_jump_consumed = false
 
 	# --- State transitions ---
@@ -704,17 +732,20 @@ func _process_footstep_audio(delta: float) -> void:
 
 		var step_target := STEP_DISTANCE_WALK
 		var step_vol := -4.0
+		var step_sound := "footstep_walk"
 
 		if _state == MoveState.SPRINT:
 			step_target = STEP_DISTANCE_SPRINT
 			step_vol = -2.0
+			step_sound = "footstep_sprint"
 		elif _state == MoveState.CROUCH:
 			step_target = STEP_DISTANCE_CROUCH
 			step_vol = -8.0
+			step_sound = "footstep_crouch"
 
 		if _step_distance_accumulator >= step_target:
 			_step_distance_accumulator = 0.0
-			AudioManager.play_2d("footstep", AudioManager.BUS_SFX, step_vol, 0.06)
+			AudioManager.play_2d(step_sound, AudioManager.BUS_SFX, step_vol, 0.06)
 	else:
 		_step_distance_accumulator = 0.0
 
@@ -838,8 +869,8 @@ func _handle_jump() -> void:
 		_state = MoveState.AIR
 		_jump_consumed = true
 		_step_distance_accumulator = 0.0
-		# Audio feedback (2D player jump)
-		AudioManager.play_2d("jump", AudioManager.BUS_SFX, -3.0, 0.05)
+		# Audio feedback (2D player jump launch)
+		AudioManager.play_2d("jump_launch", AudioManager.BUS_SFX, -3.0, 0.05)
 		# End slide on jump
 		if _is_sliding:
 			_end_slide()

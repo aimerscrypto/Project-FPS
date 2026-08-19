@@ -89,6 +89,9 @@ var _match_mgr      : MatchManager = null
 var kills  : int = 0
 var deaths : int = 0
 
+# Footstep cadence tracking
+var _bot_step_distance : float = 0.0
+
 # Perception & Retargeting
 var _retarget_timer       : float   = 0.0
 const RETARGET_INTERVAL   : float   = 0.30
@@ -332,6 +335,17 @@ func _physics_process(delta: float) -> void:
 		_process_search_state(delta)
 
 	move_and_slide()
+
+	# 3D spatial footstep cadence
+	if is_on_floor() and _state != State.DEAD and not _is_match_ended:
+		var h_speed : float = Vector2(velocity.x, velocity.z).length()
+		if h_speed > 0.4:
+			_bot_step_distance += h_speed * delta
+			if _bot_step_distance >= 2.2:
+				_bot_step_distance = 0.0
+				AudioManager.play_3d("footstep_walk", global_position, AudioManager.BUS_SFX, -6.0, 0.08, 22.0, 3.0)
+		else:
+			_bot_step_distance = 0.0
 
 
 # =============================================================================
@@ -920,6 +934,11 @@ func _fire(target_aim_pos: Vector3) -> void:
 		var hit_point : Vector3 = result.position
 		var hit_normal : Vector3 = result.normal
 
+		# Spawn bullet tracer
+		var vfx = get_node_or_null("/root/VFXManager")
+		if vfx and vfx.has_method("spawn_tracer"):
+			vfx.spawn_tracer(muzzle_pos, hit_point, Color(1.0, 0.45, 0.2, 0.85), 240.0)
+
 		if hit_collider:
 			var dmg_info := DamageInfo.new()
 			dmg_info.amount = attack_damage
@@ -938,8 +957,16 @@ func _fire(target_aim_pos: Vector3) -> void:
 			elif hit_collider.get_parent() and hit_collider.get_parent().has_method("take_damage"):
 				hit_collider.get_parent().take_damage(dmg_info)
 
+			# Spawn surface impact on non-combatants
+			if not hit_collider.is_in_group("combatants") and vfx and vfx.has_method("spawn_impact"):
+				vfx.spawn_impact(hit_point, hit_normal)
+
 		# 3D bullet impact audio in the world
 		AudioManager.play_3d("impact", hit_point, AudioManager.BUS_SFX, -3.0, 0.06, 35.0, 3.0)
+	else:
+		var vfx = get_node_or_null("/root/VFXManager")
+		if vfx and vfx.has_method("spawn_tracer"):
+			vfx.spawn_tracer(muzzle_pos, ray_end, Color(1.0, 0.45, 0.2, 0.85), 240.0)
 
 
 # =============================================================================
@@ -1000,6 +1027,11 @@ func _on_died(_killer: Node) -> void:
 	_state_label.visible = false
 	_target = null
 	_recent_attacker = null
+
+	# Elimination burst VFX
+	var vfx = get_node_or_null("/root/VFXManager")
+	if vfx and vfx.has_method("spawn_elimination_burst"):
+		vfx.spawn_elimination_burst(global_position + Vector3(0.0, 0.8, 0.0), Color(0.25, 0.85, 1.0))
 
 	# Audio feedback (3D positional bot death/destruction)
 	AudioManager.play_3d("bot_death", global_position + Vector3(0.0, 0.8, 0.0), AudioManager.BUS_SFX, 1.0, 0.05, 45.0, 4.0)

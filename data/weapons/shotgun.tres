@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://khq2sambapjc"]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+weapon_name = "Shotgun"
+damage = 12.0
+headshot_multiplier = 1.5
+fire_rate = 1.1
+is_automatic = false
+magazine_size = 6
+reserve_ammo = 36
+reload_time = 2.2
+spread_degrees = 3.8
+ads_spread_degrees = 2.4
+range_meters = 35.0
+pellet_count = 8
+recoil_vertical = 3.2
+recoil_horizontal = 1.2
+recoil_recovery = 5.0
+fire_sound = "shotgun_fire"
+dryfire_sound = "shotgun_dryfire"
+reload_sound = "shotgun_reload"
+casing_type = "shotgun"
+reload_profile = "shotgun"
+is_sniper = false
+tracer_color = Color(1, 0.5, 0.15, 0.95)
+tracer_speed = 220.0

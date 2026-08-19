@@ -1,25 +1,8 @@
-[gd_scene load_steps=8 format=3 uid="uid://b8y7w2pistol"]
+[gd_scene format=3 uid="uid://bwejj5l7i8gp5"]
 
-[ext_resource type="PackedScene" uid="uid://weapon_base" path="res://scenes/weapons/weapon_base.tscn" id="1_base"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/weapon_base.tscn" id="1_base"]
 [ext_resource type="Resource" path="res://data/weapons/pistol.tres" id="2_data"]
-
-[sub_resource type="StandardMaterial3D" id="mat_slide"]
-albedo_color = Color(0.22, 0.24, 0.27, 1)
-metallic = 0.8
-roughness = 0.35
-
-[sub_resource type="BoxMesh" id="BoxMesh_slide"]
-material = SubResource("mat_slide")
-size = Vector3(0.036, 0.042, 0.19)
-
-[sub_resource type="StandardMaterial3D" id="mat_grip"]
-albedo_color = Color(0.12, 0.13, 0.14, 1)
-metallic = 0.1
-roughness = 0.8
-
-[sub_resource type="BoxMesh" id="BoxMesh_grip"]
-material = SubResource("mat_grip")
-size = Vector3(0.034, 0.115, 0.048)
+[ext_resource type="PackedScene" path="res://scenes/weapons/pistol_visual.tscn" id="3_visual"]
 
 [sub_resource type="StandardMaterial3D" id="mat_muzzle"]
 shading_mode = 0
@@ -29,37 +12,29 @@ albedo_color = Color(1, 0.95, 0.65, 1)
 radius = 0.016
 height = 0.032
 
-[node name="Pistol" instance=ExtResource("1_base")]
+[node name="Pistol" unique_id=141809626 instance=ExtResource("1_base")]
 data = ExtResource("2_data")
 
 [node name="RayCast3D" parent="." index="0"]
 visible = false
 
-[node name="WeaponVisual" type="Node3D" parent="." index="1"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.16, -0.28)
+[node name="WeaponVisual" parent="." index="1" unique_id=1150803706 instance=ExtResource("3_visual")]
+transform = Transform3D(0.25, 0, 0, 0, 0.23014638, -0.09763527, 0, 0.09763527, 0.23014638, 0.18, -0.16, -0.32)
 
-[node name="Slide" type="MeshInstance3D" parent="WeaponVisual"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.02)
-mesh = SubResource("BoxMesh_slide")
+[node name="RightHandGrip" type="Marker3D" parent="." index="2" unique_id=1918735012]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.21, -0.21)
 
-[node name="Grip" type="MeshInstance3D" parent="WeaponVisual"]
-transform = Transform3D(1, 0, 0, 0, 0.965926, 0.258819, 0, -0.258819, 0.965926, 0, -0.065, 0.035)
-mesh = SubResource("BoxMesh_grip")
+[node name="LeftHandGrip" type="Marker3D" parent="." index="3" unique_id=1486386384]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.21, -0.21)
 
-[node name="RightHandGrip" type="Marker3D" parent="." index="2"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.22, -0.24)
-
-[node name="LeftHandGrip" type="Marker3D" parent="." index="3"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.22, -0.24)
-
-[node name="MuzzleFlash" type="MeshInstance3D" parent="." index="4"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.16, -0.395)
+[node name="MuzzleFlash" type="MeshInstance3D" parent="." index="4" unique_id=2071028884]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.198, -0.436)
 visible = false
 material_override = SubResource("mat_muzzle")
 mesh = SubResource("SphereMesh_flash")
 
-[node name="OpticPoint" type="Marker3D" parent="." index="5"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.138, -0.28)
+[node name="OpticPoint" type="Marker3D" parent="." index="5" unique_id=249175358]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.181, -0.057, -0.276)
 
-[node name="EjectionPort" type="Marker3D" parent="." index="6"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.195, -0.145, -0.26)
+[node name="EjectionPort" type="Marker3D" parent="." index="6" unique_id=391485250]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.208, -0.148, -0.236)

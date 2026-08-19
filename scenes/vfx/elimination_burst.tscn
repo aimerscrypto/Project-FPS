@@ -1,0 +1,35 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/elimination_burst.gd" id="1_burst"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_cube1"]
+size = Vector3(0.18, 0.18, 0.18)
+
+[node name="EliminationBurst" type="Node3D"]
+script = ExtResource("1_burst")
+
+[node name="MeshRoot" type="Node3D" parent="."]
+
+[node name="Cube1" type="MeshInstance3D" parent="MeshRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25, 0.2, 0)
+mesh = SubResource("BoxMesh_cube1")
+
+[node name="Cube2" type="MeshInstance3D" parent="MeshRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.25, 0.15, 0.15)
+mesh = SubResource("BoxMesh_cube1")
+
+[node name="Cube3" type="MeshInstance3D" parent="MeshRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, -0.25, -0.2)
+mesh = SubResource("BoxMesh_cube1")
+
+[node name="Cube4" type="MeshInstance3D" parent="MeshRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, -0.2, 0.2)
+mesh = SubResource("BoxMesh_cube1")
+
+[node name="Cube5" type="MeshInstance3D" parent="MeshRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, -0.1)
+mesh = SubResource("BoxMesh_cube1")
+
+[node name="Cube6" type="MeshInstance3D" parent="MeshRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.35, 0.1)
+mesh = SubResource("BoxMesh_cube1")
