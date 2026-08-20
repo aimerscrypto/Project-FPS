@@ -1,8 +1,5 @@
-[gd_scene format=3 uid="uid://3c0v4wj0sou1"]
+[gd_scene load_steps=2 format=3 uid="uid://3c0v4wj0sou1"]
 
-[ext_resource type="PackedScene" uid="uid://cwr1ln8kv1ssl" path="res://assets/models/player/fps gun.fbx" id="1_fps_gun"]
+[ext_resource type="PackedScene" path="res://assets/models/player/fp_m16.glb" id="1_m16_glb"]
 
-[node name="WeaponVisual" unique_id=608214700 instance=ExtResource("1_fps_gun")]
-
-[node name="tripo_node_e707be46" parent="." index="0" unique_id=244864558]
-transform = Transform3D(0.7431448, -0.6691306, 0, 0, 0, 1, -0.6691306, -0.7431448, 0, 0, 0, 0)
+[node name="WeaponVisual" instance=ExtResource("1_m16_glb")]

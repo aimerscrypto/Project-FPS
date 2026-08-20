@@ -32,6 +32,7 @@ signal target_hit(is_headshot: bool, is_kill: bool)
 
 # Visual node references & authored base transforms
 @onready var _weapon_visual : Node3D       = find_child("WeaponVisual", true, false)
+@onready var _anim_player   : AnimationPlayer = find_child("AnimationPlayer", true, false)
 @onready var _right_grip    : Node3D       = find_child("RightHandGrip", true, false)
 @onready var _left_grip     : Node3D       = find_child("LeftHandGrip", true, false)
 @onready var _optic_point    : Node3D       = find_child("OpticPoint", true, false)
@@ -300,6 +301,8 @@ func equip() -> void:
 	set_process(true)
 	if is_instance_valid(_weapon_visual):
 		_weapon_visual.visible = true
+	if is_instance_valid(_anim_player):
+		_play_anim("M16_Idle", "idle")
 	_equip_timer = EQUIP_DURATION
 	_has_last_cam_rot = false
 	_current_kick_pos = Vector3.ZERO
@@ -322,6 +325,9 @@ func unequip() -> void:
 	elif _state == WeaponState.FIRING:
 		_state = WeaponState.READY
 		_fire_timer = 0.0
+
+	if is_instance_valid(_anim_player):
+		_anim_player.stop()
 
 	_is_aiming = false
 	_ads_weight = 0.0
@@ -418,6 +424,9 @@ func _fire() -> void:
 	ammo_changed.emit(_current_ammo, _reserve_ammo)
 	_fire_timer = 1.0 / data.fire_rate
 	_time_since_fired = 0.0
+
+	# Skeletal fire animation trigger
+	_play_anim("M16_Fire", "fire", true)
 
 	# Audio feedback (2D player weapon fire)
 	var snd_fire : String = data.fire_sound if (data and not data.fire_sound.is_empty()) else "ar_fire"
@@ -640,6 +649,8 @@ func _spawn_impact_marker(point: Vector3, normal: Vector3) -> void:
 func _start_reload() -> void:
 	_state = WeaponState.RELOADING
 	_reload_timer = data.reload_time
+	# Skeletal reload animation trigger
+	_play_anim("M16_Reload", "reload", true)
 	# Audio feedback (2D player weapon reload)
 	var snd_reload : String = data.reload_sound if (data and not data.reload_sound.is_empty()) else "ar_reload"
 	AudioManager.play_2d(snd_reload, AudioManager.BUS_SFX, -1.0, 0.0)
@@ -653,6 +664,7 @@ func _finish_reload() -> void:
 	_reserve_ammo -= taken
 	_state = WeaponState.READY
 	ammo_changed.emit(_current_ammo, _reserve_ammo)
+	_play_anim("M16_Idle", "idle")
 	print("[Weapon] Reload complete. Ammo: %d / %d" % [_current_ammo, _reserve_ammo])
 
 
@@ -689,6 +701,8 @@ func _tick_fire_timer(delta: float) -> void:
 			_fire_timer = 0.0
 			if _state == WeaponState.FIRING:
 				_state = WeaponState.READY
+				if is_instance_valid(_anim_player) and not _anim_player.is_playing():
+					_play_anim("M16_Idle", "idle")
 
 
 func _tick_reload_timer(delta: float) -> void:
@@ -907,7 +921,8 @@ func _update_weapon_motion(delta: float) -> void:
 	# 9. Procedural Reload Presentation
 	var target_reload_pos := Vector3.ZERO
 	var target_reload_rot := Vector3.ZERO
-	if _state == WeaponState.RELOADING:
+	var has_skeletal_reload : bool = is_instance_valid(_anim_player) and (_anim_player.has_animation("M16_Reload") or _anim_player.has_animation("reload"))
+	if _state == WeaponState.RELOADING and not has_skeletal_reload:
 		var reload_duration : float = maxf(data.reload_time, 0.001)
 		var progress : float = clampf(1.0 - (_reload_timer / reload_duration), 0.0, 1.0)
 		var sampled : Dictionary = _sample_reload_pose(progress)
@@ -969,3 +984,18 @@ func _update_weapon_motion(delta: float) -> void:
 	if is_instance_valid(_optic_point):
 		_optic_point.transform.origin = _base_optic_transform.origin + total_pos
 		_optic_point.transform.basis = rot_basis * _base_optic_transform.basis
+
+
+func _play_anim(primary_name: String, fallback_name: String = "", force_restart: bool = false) -> void:
+	if not is_instance_valid(_anim_player):
+		return
+	var target_anim : String = ""
+	if _anim_player.has_animation(primary_name):
+		target_anim = primary_name
+	elif not fallback_name.is_empty() and _anim_player.has_animation(fallback_name):
+		target_anim = fallback_name
+	
+	if not target_anim.is_empty():
+		if force_restart:
+			_anim_player.stop()
+		_anim_player.play(target_anim)
