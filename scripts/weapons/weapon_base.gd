@@ -95,15 +95,15 @@ const BOB_ROT_Z         : float = 0.0160  # ~0.92 deg roll counter-balance
 const BOB_LERP_SPEED    : float = 7.5     # smooth blend speed in/out of stride
 
 # 3. Sprint Presentation (Tactical Low-Ready Pose + Dynamic Jog Pump)
-const SPRINT_POS_BASE   : Vector3 = Vector3(0.012, -0.055, 0.025)  # lowered 5.5cm, tucked 2.5cm back
-const SPRINT_ROT_BASE   : Vector3 = Vector3(-0.200, -0.090, -0.160) # -11.5° pitch down, -5.2° yaw in, -9.2° roll tilt
+const SPRINT_POS_BASE   : Vector3 = Vector3(0.010, -0.015, 0.020)  # gentle 1.5cm dip, tucked 2.0cm back
+const SPRINT_ROT_BASE   : Vector3 = Vector3(-0.040, -0.010, -0.020) # natural tactical low-ready (~2.3° pitch down, ~0.6° yaw, ~1.1° roll)
 const SPRINT_FREQ_PUMP  : float   = 0.75   # rhythmic sprint jog pump cadence
-const SPRINT_PUMP_POS_X : float   = 0.0080 # 8.0 mm lateral jog sway
-const SPRINT_PUMP_POS_Y : float   = 0.0065 # 6.5 mm vertical jog pump
-const SPRINT_PUMP_POS_Z : float   = 0.0050 # 5.0 mm forward/back jog pump
-const SPRINT_PUMP_ROT_X : float   = 0.0350 # ~2.0 deg dynamic jog pitch
-const SPRINT_PUMP_ROT_Y : float   = 0.0250 # ~1.4 deg dynamic jog yaw
-const SPRINT_PUMP_ROT_Z : float   = 0.0400 # ~2.3 deg dynamic jog roll
+const SPRINT_PUMP_POS_X : float   = 0.0060 # 6.0 mm lateral jog sway
+const SPRINT_PUMP_POS_Y : float   = 0.0050 # 5.0 mm vertical jog pump
+const SPRINT_PUMP_POS_Z : float   = 0.0040 # 4.0 mm forward/back jog pump
+const SPRINT_PUMP_ROT_X : float   = 0.0200 # ~1.1 deg dynamic jog pitch
+const SPRINT_PUMP_ROT_Y : float   = 0.0150 # ~0.8 deg dynamic jog yaw
+const SPRINT_PUMP_ROT_Z : float   = 0.0180 # ~1.0 deg dynamic jog roll
 const SPRINT_LERP_SPEED : float   = 7.5    # transition speed into/out of sprint (~0.15s)
 
 # 4. Crouch Presentation (Natural camera-matched compression)
@@ -944,10 +944,12 @@ func _update_weapon_motion(delta: float) -> void:
 	var ads_damped_look_rot := _current_look_sway_rot * lerpf(1.0, ADS_LOOK_DAMP, _ads_weight)
 
 	var ads_pos_target := ADS_POS_OFFSET
+	var ads_rot_target := ADS_ROT_OFFSET
 	if is_instance_valid(_optic_point):
-		ads_pos_target = Vector3(0.0, 0.0, -0.25) - _base_optic_transform.origin
+		ads_pos_target = Vector3(0.0, 0.0, -0.32) - _base_optic_transform.origin
+		ads_rot_target = -_base_visual_transform.basis.get_euler()
 	var current_ads_pos := ads_pos_target * _ads_weight
-	var current_ads_rot := ADS_ROT_OFFSET * _ads_weight
+	var current_ads_rot := ads_rot_target * _ads_weight
 
 	# 11. Equip Ready-Up Presentation (~0.20s switch animation)
 	var current_equip_pos := Vector3.ZERO

@@ -19,22 +19,22 @@ data = ExtResource("2_data")
 visible = false
 
 [node name="WeaponVisual" parent="." index="1" unique_id=1820334908 instance=ExtResource("3_visual")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.22, -0.65)
+transform = Transform3D(0.993006, 0.034728, -0.112818, -0.039601, 0.998242, -0.041538, 0.111244, 0.045624, 0.992742, 0.24, -0.46, -1.08)
 
 [node name="RightHandGrip" type="Marker3D" parent="." index="2" unique_id=1682256336]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.08, -0.15, -0.32)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.26, -0.4, -0.48)
 
 [node name="LeftHandGrip" type="Marker3D" parent="." index="3" unique_id=1907787290]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.04, -0.12, -0.48)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.14, -0.32, -0.72)
 
 [node name="MuzzleFlash" type="MeshInstance3D" parent="." index="4" unique_id=267746676]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.08, -0.12, -0.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.27, -1.25)
 visible = false
 material_override = SubResource("mat_muzzle")
 mesh = SubResource("SphereMesh_flash")
 
 [node name="OpticPoint" type="Marker3D" parent="." index="5" unique_id=1992837465]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.07, -0.04, -0.42)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.24, -0.19, -0.45)
 
 [node name="EjectionPort" type="Marker3D" parent="." index="6" unique_id=379574487]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.09, -0.07, -0.38)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25, -0.25, -0.55)
