@@ -190,12 +190,12 @@ const EQUIP_ROT_OFFSET : Vector3 = Vector3(-0.200, 0.030, -0.060) # Tilted up fr
 
 
 # 9. Aim Down Sights (ADS) Presentation (Optic Alignment & Stance)
-const ADS_POS_OFFSET        : Vector3 = Vector3(-0.1952, 0.0820, 0.0700) # Aligns optic centerline precisely with camera (0,0)
-const ADS_ROT_OFFSET        : Vector3 = Vector3(0.0030, -0.0550, 0.0020) # Straightens sightline down center axis
-const ADS_LERP_SPEED        : float   = 14.0                              # Fast arcade transition speed (~0.15s)
-const ADS_SWAY_DAMP         : float   = 0.35                              # Subtle breathing damping while aiming
-const ADS_BOB_DAMP          : float   = 0.25                              # Reduced walk bob while aiming
-const ADS_LOOK_DAMP         : float   = 0.20                              # Reduced rotational inertia while aiming
+const ADS_POS_OFFSET        : Vector3 = Vector3(-0.1800, 0.0800, 0.0600) # Fallback optic centerline
+const ADS_ROT_OFFSET        : Vector3 = Vector3.ZERO                      # Sightline rotation correction
+const ADS_LERP_SPEED        : float   = 16.0                              # Snappy AAA transition speed (~0.12s)
+const ADS_SWAY_DAMP         : float   = 0.20                              # Substantial breathing damping while aiming
+const ADS_BOB_DAMP          : float   = 0.15                              # Minimal walk bob while aiming for steady sight picture
+const ADS_LOOK_DAMP         : float   = 0.15                              # Reduced rotational inertia while aiming
 
 # Motion tracking state
 var _idle_timer             : float   = 0.0
@@ -302,7 +302,7 @@ func equip() -> void:
 	if is_instance_valid(_weapon_visual):
 		_weapon_visual.visible = true
 	if is_instance_valid(_anim_player):
-		_play_anim("M16_Idle", "idle")
+		_play_anim("idle")
 	_equip_timer = EQUIP_DURATION
 	_has_last_cam_rot = false
 	_current_kick_pos = Vector3.ZERO
@@ -425,8 +425,8 @@ func _fire() -> void:
 	_fire_timer = 1.0 / data.fire_rate
 	_time_since_fired = 0.0
 
-	# Skeletal fire animation trigger
-	_play_anim("M16_Fire", "fire", true)
+	# Skeletal fire animation trigger (if present)
+	_play_anim("fire", "", true)
 
 	# Audio feedback (2D player weapon fire)
 	var snd_fire : String = data.fire_sound if (data and not data.fire_sound.is_empty()) else "ar_fire"
@@ -649,8 +649,8 @@ func _spawn_impact_marker(point: Vector3, normal: Vector3) -> void:
 func _start_reload() -> void:
 	_state = WeaponState.RELOADING
 	_reload_timer = data.reload_time
-	# Skeletal reload animation trigger
-	_play_anim("M16_Reload", "reload", true)
+	# Skeletal reload animation trigger (if present)
+	_play_anim("reload", "", true)
 	# Audio feedback (2D player weapon reload)
 	var snd_reload : String = data.reload_sound if (data and not data.reload_sound.is_empty()) else "ar_reload"
 	AudioManager.play_2d(snd_reload, AudioManager.BUS_SFX, -1.0, 0.0)
@@ -664,7 +664,7 @@ func _finish_reload() -> void:
 	_reserve_ammo -= taken
 	_state = WeaponState.READY
 	ammo_changed.emit(_current_ammo, _reserve_ammo)
-	_play_anim("M16_Idle", "idle")
+	_play_anim("idle")
 	print("[Weapon] Reload complete. Ammo: %d / %d" % [_current_ammo, _reserve_ammo])
 
 
@@ -702,7 +702,7 @@ func _tick_fire_timer(delta: float) -> void:
 			if _state == WeaponState.FIRING:
 				_state = WeaponState.READY
 				if is_instance_valid(_anim_player) and not _anim_player.is_playing():
-					_play_anim("M16_Idle", "idle")
+					_play_anim("idle")
 
 
 func _tick_reload_timer(delta: float) -> void:
@@ -921,7 +921,7 @@ func _update_weapon_motion(delta: float) -> void:
 	# 9. Procedural Reload Presentation
 	var target_reload_pos := Vector3.ZERO
 	var target_reload_rot := Vector3.ZERO
-	var has_skeletal_reload : bool = is_instance_valid(_anim_player) and (_anim_player.has_animation("M16_Reload") or _anim_player.has_animation("reload"))
+	var has_skeletal_reload : bool = is_instance_valid(_anim_player) and _anim_player.has_animation("reload")
 	if _state == WeaponState.RELOADING and not has_skeletal_reload:
 		var reload_duration : float = maxf(data.reload_time, 0.001)
 		var progress : float = clampf(1.0 - (_reload_timer / reload_duration), 0.0, 1.0)
@@ -936,20 +936,22 @@ func _update_weapon_motion(delta: float) -> void:
 
 	# 10. Aim Down Sights (ADS) Alignment Offset & Motion Damping
 	# Dampen sway, bob, and look inertia during ADS for steady, precise aim
-	var ads_damped_idle_pos := idle_pos * lerpf(1.0, ADS_SWAY_DAMP, _ads_weight)
-	var ads_damped_idle_rot := idle_rot * lerpf(1.0, ADS_SWAY_DAMP, _ads_weight)
-	var ads_damped_bob_pos := _current_bob_pos * lerpf(1.0, ADS_BOB_DAMP, _ads_weight)
-	var ads_damped_bob_rot := _current_bob_rot * lerpf(1.0, ADS_BOB_DAMP, _ads_weight)
-	var ads_damped_look_pos := _current_look_sway_pos * lerpf(1.0, ADS_LOOK_DAMP, _ads_weight)
-	var ads_damped_look_rot := _current_look_sway_rot * lerpf(1.0, ADS_LOOK_DAMP, _ads_weight)
+	var ads_eased : float = _ads_weight * _ads_weight * (3.0 - 2.0 * _ads_weight)
+	var ads_damped_idle_pos := idle_pos * lerpf(1.0, ADS_SWAY_DAMP, ads_eased)
+	var ads_damped_idle_rot := idle_rot * lerpf(1.0, ADS_SWAY_DAMP, ads_eased)
+	var ads_damped_bob_pos := _current_bob_pos * lerpf(1.0, ADS_BOB_DAMP, ads_eased)
+	var ads_damped_bob_rot := _current_bob_rot * lerpf(1.0, ADS_BOB_DAMP, ads_eased)
+	var ads_damped_look_pos := _current_look_sway_pos * lerpf(1.0, ADS_LOOK_DAMP, ads_eased)
+	var ads_damped_look_rot := _current_look_sway_rot * lerpf(1.0, ADS_LOOK_DAMP, ads_eased)
 
 	var ads_pos_target := ADS_POS_OFFSET
 	var ads_rot_target := ADS_ROT_OFFSET
 	if is_instance_valid(_optic_point):
-		ads_pos_target = Vector3(0.0, 0.0, -0.32) - _base_optic_transform.origin
+		# Center sightline at (0, 0) with optimal eye relief (Z=-0.25)
+		ads_pos_target = Vector3(0.0, 0.0, -0.25) - _base_optic_transform.origin
 		ads_rot_target = -_base_visual_transform.basis.get_euler()
-	var current_ads_pos := ads_pos_target * _ads_weight
-	var current_ads_rot := ads_rot_target * _ads_weight
+	var current_ads_pos := ads_pos_target * ads_eased
+	var current_ads_rot := ads_rot_target * ads_eased
 
 	# 11. Equip Ready-Up Presentation (~0.20s switch animation)
 	var current_equip_pos := Vector3.ZERO

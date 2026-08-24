@@ -8,3 +8,4 @@
 
 # Temporary scratch and audit scripts
 scratch/
+.agents/

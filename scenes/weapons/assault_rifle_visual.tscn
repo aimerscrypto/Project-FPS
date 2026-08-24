@@ -1,5 +1,7 @@
 [gd_scene load_steps=2 format=3 uid="uid://3c0v4wj0sou1"]
 
-[ext_resource type="PackedScene" path="res://assets/models/player/fp_m16.glb" id="1_m16_glb"]
+[ext_resource type="Script" path="res://scripts/weapons/weapon_visual.gd" id="1_visual"]
 
-[node name="WeaponVisual" instance=ExtResource("1_m16_glb")]
+[node name="WeaponVisual" type="Node3D"]
+script = ExtResource("1_visual")
+weapon_node_name = "M16_8"

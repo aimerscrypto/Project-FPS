@@ -155,8 +155,8 @@
 project-fps/
 ├── assets/
 │   ├── models/
-│   │   ├── player/                           [Production character & weapon assets: player.glb, fps gun.fbx]
-│   │   ├── weapons/                          [Weapon models & textures: fps_weapon_animated.glb]
+│   │   ├── 12_low_poly_guns.glb              [Untouched master 12-weapon 3D asset source]
+│   │   ├── player/                           [Production character asset: player.glb]
 │   │   ├── enemies/
 │   │   └── environment/
 │   ├── animations/ audio/ materials/ textures/ vfx/
@@ -166,7 +166,15 @@ project-fps/
 │   ├── weapons/
 │   │   ├── weapon_base.tscn                  [M2, M7: Procedural Viewmodel Animation base]
 │   │   ├── assault_rifle.tscn                [M2, M7: Calibrated Assault Rifle with grips & optic point]
-│   │   └── assault_rifle_visual.tscn         [M7: High-detail 3D Assault Rifle Visual]
+│   │   ├── assault_rifle_visual.tscn         [M7: Direct instance of 12_low_poly_guns.glb (M16_8)]
+│   │   ├── pistol.tscn                       [M9: Calibrated Semi-Auto Pistol]
+│   │   ├── pistol_visual.tscn                [M9: Direct instance of 12_low_poly_guns.glb (Glock Handgun_45)]
+│   │   ├── shotgun.tscn                      [M10: Calibrated Pump-Action Shotgun]
+│   │   ├── shotgun_visual.tscn               [M10: Direct instance of 12_low_poly_guns.glb (Pump Action Shotgun_25)]
+│   │   ├── smg.tscn                          [M10: Calibrated High-RPM SMG]
+│   │   ├── smg_visual.tscn                   [M10: Direct instance of 12_low_poly_guns.glb (MP5_17)]
+│   │   ├── sniper.tscn                       [M10: Calibrated Bolt-Action Sniper Rifle]
+│   │   └── sniper_visual.tscn                [M10: Direct instance of 12_low_poly_guns.glb (M40_33)]
 │   ├── enemies/
 │   │   ├── basic_bot.tscn                    [M4-M7: Production 3D model, Multi-target AI, 3D labels]
 │   │   └── dummy_target.tscn                 [M3: Static shooting target]

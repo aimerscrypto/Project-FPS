@@ -1,44 +1,8 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://khq2sambapjc"]
 
 [ext_resource type="PackedScene" path="res://scenes/weapons/weapon_base.tscn" id="1_base"]
 [ext_resource type="Resource" path="res://data/weapons/shotgun.tres" id="2_data"]
-
-[sub_resource type="StandardMaterial3D" id="mat_receiver"]
-albedo_color = Color(0.16, 0.18, 0.22, 1)
-metallic = 0.8
-roughness = 0.3
-
-[sub_resource type="BoxMesh" id="BoxMesh_receiver"]
-material = SubResource("mat_receiver")
-size = Vector3(0.048, 0.065, 0.32)
-
-[sub_resource type="StandardMaterial3D" id="mat_barrel"]
-albedo_color = Color(0.12, 0.13, 0.16, 1)
-metallic = 0.85
-roughness = 0.25
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_barrel"]
-material = SubResource("mat_barrel")
-top_radius = 0.016
-bottom_radius = 0.016
-height = 0.28
-radial_segments = 8
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_tube"]
-material = SubResource("mat_receiver")
-top_radius = 0.014
-bottom_radius = 0.014
-height = 0.24
-radial_segments = 8
-
-[sub_resource type="StandardMaterial3D" id="mat_pump"]
-albedo_color = Color(0.24, 0.16, 0.10, 1)
-metallic = 0.1
-roughness = 0.7
-
-[sub_resource type="BoxMesh" id="BoxMesh_pump"]
-material = SubResource("mat_pump")
-size = Vector3(0.042, 0.042, 0.12)
+[ext_resource type="PackedScene" uid="uid://dh4y3w6x1b28n" path="res://scenes/weapons/shotgun_visual.tscn" id="3_visual"]
 
 [sub_resource type="StandardMaterial3D" id="mat_muzzle"]
 shading_mode = 0
@@ -54,38 +18,23 @@ data = ExtResource("2_data")
 [node name="RayCast3D" parent="." index="0"]
 visible = false
 
-[node name="WeaponVisual" type="Node3D" parent="." index="1"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.19, -0.19, -0.34)
-
-[node name="Receiver" type="MeshInstance3D" parent="WeaponVisual"]
-mesh = SubResource("BoxMesh_receiver")
-
-[node name="Barrel" type="MeshInstance3D" parent="WeaponVisual"]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0.014, -0.26)
-mesh = SubResource("CylinderMesh_barrel")
-
-[node name="MagTube" type="MeshInstance3D" parent="WeaponVisual"]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, -0.016, -0.24)
-mesh = SubResource("CylinderMesh_tube")
-
-[node name="Pump" type="MeshInstance3D" parent="WeaponVisual"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.016, -0.22)
-mesh = SubResource("BoxMesh_pump")
+[node name="WeaponVisual" parent="." index="1" instance=ExtResource("3_visual")]
+transform = Transform3D(0.55, 0, 0, 0, 0.55, 0, 0, 0, 0.55, 0.18, -0.18, -0.34)
 
 [node name="RightHandGrip" type="Marker3D" parent="." index="2"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.19, -0.24, -0.26)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.23, -0.26)
 
 [node name="LeftHandGrip" type="Marker3D" parent="." index="3"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.19, -0.20, -0.56)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.20, -0.52)
 
 [node name="MuzzleFlash" type="MeshInstance3D" parent="." index="4"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.19, -0.176, -0.62)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.170, -1.03)
 visible = false
 material_override = SubResource("mat_muzzle")
 mesh = SubResource("SphereMesh_flash")
 
 [node name="OpticPoint" type="Marker3D" parent="." index="5"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.19, -0.155, -0.34)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.1204, -0.34)
 
 [node name="EjectionPort" type="Marker3D" parent="." index="6"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.22, -0.165, -0.30)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.205, -0.165, -0.30)

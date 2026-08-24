@@ -546,12 +546,26 @@ func _process(delta: float) -> void:
 	_is_aiming = wants_aim
 	_ads_weight = lerpf(_ads_weight, 1.0 if _is_aiming else 0.0, ADS_LERP_SPEED * delta)
 
-	var is_sniper_active : bool = (_active_weapon != null and is_instance_valid(_active_weapon) and _active_weapon.get("data") != null and _active_weapon.data.get("is_sniper") == true)
-	var target_ads_fov : float = 34.0 if is_sniper_active else ADS_FOV
+	var target_ads_fov : float = ADS_FOV
+	var is_sniper_active : bool = false
+	if _active_weapon and is_instance_valid(_active_weapon) and _active_weapon.get("data") != null:
+		var w_name : String = _active_weapon.data.weapon_name.to_lower()
+		is_sniper_active = _active_weapon.data.get("is_sniper") == true or "sniper" in w_name
+		if is_sniper_active:
+			target_ads_fov = 28.0 # 3.2x high-magnification scope
+		elif "assault" in w_name or "m16" in w_name:
+			target_ads_fov = 70.0 # Clear mid-range combat optic zoom
+		elif "smg" in w_name or "mp5" in w_name:
+			target_ads_fov = 74.0 # Snappy close-quarters sight picture
+		elif "shotgun" in w_name:
+			target_ads_fov = 78.0 # Wide situational awareness
+		elif "pistol" in w_name or "glock" in w_name:
+			target_ads_fov = 78.0 # Clean handgun eye alignment
 
-	# Smooth camera FOV zoom while aiming (high magnification for sniper)
+	# Smooth camera FOV zoom while aiming with smoothstep easing
+	var ads_eased_cam : float = _ads_weight * _ads_weight * (3.0 - 2.0 * _ads_weight)
 	if _camera:
-		_camera.fov = lerpf(_base_fov, target_ads_fov, _ads_weight)
+		_camera.fov = lerpf(_base_fov, target_ads_fov, ads_eased_cam)
 
 	# Hipfire crosshair fade during ADS
 	if _crosshair_hud:

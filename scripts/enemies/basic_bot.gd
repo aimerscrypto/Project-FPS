@@ -525,6 +525,10 @@ func _get_entity_name(entity: Node) -> String:
 # COMBAT AI & TACTICAL ENGAGEMENT
 # =============================================================================
 func _process_combat_ai(delta: float) -> void:
+	# Automatically initiate reload if magazine is depleted
+	if _current_ammo <= 0 and not _is_reloading:
+		_start_reload()
+
 	var target_pos : Vector3 = _target.global_position
 	var target_torso : Vector3 = _target.get_target_position() if _target.has_method("get_target_position") else target_pos + Vector3(0.0, 0.8, 0.0)
 	var dist : float = global_position.distance_to(target_pos)
@@ -895,11 +899,14 @@ func _start_reload() -> void:
 		return
 	_is_reloading = true
 	_reload_timer = reload_time
+	AudioManager.play_3d("ar_reload", global_position, AudioManager.BUS_SFX, -4.0, 0.05, 30.0, 3.0)
 
 
 func _fire(target_aim_pos: Vector3) -> void:
 	_fire_timer = 1.0 / attack_fire_rate
 	_current_ammo -= 1
+	if _current_ammo <= 0:
+		_start_reload()
 
 	var muzzle_pos := _muzzle.global_position if is_instance_valid(_muzzle) else global_position + Vector3(0.0, 1.2, 0.0)
 	var aim_dir := (target_aim_pos - muzzle_pos).normalized()
