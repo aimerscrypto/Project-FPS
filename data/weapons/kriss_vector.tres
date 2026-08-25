@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3 uid="uid://d3krissvector01"]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+weapon_name = "Kriss Vector"
+damage = 14.0
+headshot_multiplier = 1.65
+fire_rate = 20.0
+is_automatic = true
+magazine_size = 30
+reserve_ammo = 150
+reload_time = 1.3
+spread_degrees = 1.1
+ads_spread_degrees = 0.20
+range_meters = 50.0
+pellet_count = 1
+recoil_vertical = 0.55
+recoil_horizontal = 0.35
+recoil_recovery = 6.5
+fire_sound = "smg_fire"
+dryfire_sound = "ar_dryfire"
+reload_sound = "ar_reload"
+casing_type = "pistol"
+reload_profile = "pistol"
+is_sniper = false
+tracer_color = Color(1, 0.9, 0.4, 0.9)
+tracer_speed = 250.0

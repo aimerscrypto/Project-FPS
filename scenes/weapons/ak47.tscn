@@ -1,0 +1,40 @@
+[gd_scene format=3 uid="uid://w0ak47scene001"]
+
+[ext_resource type="PackedScene" path="res://scenes/weapons/weapon_base.tscn" id="1_base"]
+[ext_resource type="Resource" path="res://data/weapons/ak47.tres" id="2_data"]
+[ext_resource type="PackedScene" uid="uid://c3ak47vis0001" path="res://scenes/weapons/ak47_visual.tscn" id="3_visual"]
+
+[sub_resource type="StandardMaterial3D" id="mat_muzzle"]
+shading_mode = 0
+albedo_color = Color(1, 0.75, 0.2, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_flash"]
+radius = 0.026
+height = 0.052
+
+[node name="AK47" instance=ExtResource("1_base")]
+data = ExtResource("2_data")
+
+[node name="RayCast3D" parent="." index="0"]
+visible = false
+
+[node name="WeaponVisual" parent="." index="1" instance=ExtResource("3_visual")]
+transform = Transform3D(0.55, 0, 0, 0, 0.55, 0, 0, 0, 0.55, 0.18, -0.18, -0.32)
+
+[node name="RightHandGrip" type="Marker3D" parent="." index="2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.23, -0.28)
+
+[node name="LeftHandGrip" type="Marker3D" parent="." index="3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.20, -0.46)
+
+[node name="MuzzleFlash" type="MeshInstance3D" parent="." index="4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.1304, -0.951)
+visible = false
+material_override = SubResource("mat_muzzle")
+mesh = SubResource("SphereMesh_flash")
+
+[node name="OpticPoint" type="Marker3D" parent="." index="5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.1304, -0.32)
+
+[node name="EjectionPort" type="Marker3D" parent="." index="6"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.21, -0.14, -0.26)

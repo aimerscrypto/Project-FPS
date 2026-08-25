@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3 uid="uid://d3sawedoff001"]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+weapon_name = "Sawed-Off Shotgun"
+damage = 14.0
+headshot_multiplier = 1.5
+fire_rate = 3.5
+is_automatic = false
+magazine_size = 2
+reserve_ammo = 24
+reload_time = 1.8
+spread_degrees = 5.2
+ads_spread_degrees = 3.8
+range_meters = 25.0
+pellet_count = 10
+recoil_vertical = 4.5
+recoil_horizontal = 1.8
+recoil_recovery = 4.8
+fire_sound = "shotgun_fire"
+dryfire_sound = "shotgun_dryfire"
+reload_sound = "shotgun_reload"
+casing_type = "shotgun"
+reload_profile = "shotgun"
+is_sniper = false
+tracer_color = Color(1, 0.45, 0.1, 0.95)
+tracer_speed = 210.0

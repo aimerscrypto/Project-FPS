@@ -59,13 +59,7 @@ const HEIGHT_LERP_SPEED : float = 12.0   # how fast the capsule shrinks/grows
 @onready var _combat_hud   : CanvasLayer     = $CombatHUD
 @onready var _crosshair_hud : CanvasLayer     = find_child("CrosshairHUD", true, false)
 
-# Weapon references & inventory slots (Slot 0 = AR, Slot 1 = SMG, Slot 2 = Shotgun, Slot 3 = Sniper, Slot 4 = Pistol)
-@onready var _weapon_primary   : Node3D = find_child("AssaultRifle", true, false)
-@onready var _weapon_smg       : Node3D = find_child("SMG", true, false)
-@onready var _weapon_shotgun   : Node3D = find_child("Shotgun", true, false)
-@onready var _weapon_sniper    : Node3D = find_child("Sniper", true, false)
-@onready var _weapon_secondary : Node3D = find_child("Pistol", true, false)
-
+# Weapon references & inventory slots (Slots 0 to 11)
 var _weapons           : Array[Node3D] = []
 var _active_slot_index : int           = 0
 var _active_weapon     : Node3D        = null
@@ -150,18 +144,21 @@ func _ready() -> void:
 		_health.spawn_protection_started.connect(_on_spawn_protection_started)
 		_health.spawn_protection_ended.connect(_on_spawn_protection_ended)
 
-	# Register weapons in inventory slots (Slot 0 = AR, Slot 1 = SMG, Slot 2 = Shotgun, Slot 3 = Sniper, Slot 4 = Pistol)
+	# Register weapons in inventory slots (Slots 0 to 11)
 	_weapons.clear()
-	if is_instance_valid(_weapon_primary):
-		_weapons.append(_weapon_primary)
-	if is_instance_valid(_weapon_smg):
-		_weapons.append(_weapon_smg)
-	if is_instance_valid(_weapon_shotgun):
-		_weapons.append(_weapon_shotgun)
-	if is_instance_valid(_weapon_sniper):
-		_weapons.append(_weapon_sniper)
-	if is_instance_valid(_weapon_secondary):
-		_weapons.append(_weapon_secondary)
+	var slot_order : Array[String] = [
+		"AssaultRifle", "AK47", "SMG", "KrissVector",
+		"Shotgun", "SawedOff", "Sniper", "Dragunov",
+		"Pistol", "Revolver", "Luger", "DesertEagle"
+	]
+	for w_name in slot_order:
+		var w_node : Node3D = _camera.get_node_or_null(w_name) as Node3D if _camera else null
+		if is_instance_valid(w_node):
+			_weapons.append(w_node)
+		else:
+			var fallback : Node3D = find_child(w_name, true, false) as Node3D
+			if is_instance_valid(fallback):
+				_weapons.append(fallback)
 
 	for w in _weapons:
 		if w.has_method("set_player"):
@@ -459,8 +456,15 @@ func switch_weapon(slot_index: int) -> void:
 		return
 
 	var old_weapon := _active_weapon
-	if is_instance_valid(old_weapon) and old_weapon.has_method("unequip"):
-		old_weapon.unequip()
+	if is_instance_valid(old_weapon):
+		var old_vis := old_weapon.get_node_or_null("WeaponVisual")
+		if is_instance_valid(old_vis):
+			old_vis.visible = true
+		if old_weapon.has_method("unequip"):
+			old_weapon.unequip()
+
+	if _combat_hud and _combat_hud.has_method("set_sniper_scope_visible"):
+		_combat_hud.set_sniper_scope_visible(false)
 
 	_active_slot_index = slot_index
 	_active_weapon = _weapons[_active_slot_index]
@@ -521,23 +525,22 @@ func _process(delta: float) -> void:
 	if _match_mgr != null and _match_mgr.is_staging():
 		return
 
-	# Weapon slot switching inputs
-	if Input.is_action_just_pressed("weapon_slot_1"):
-		switch_weapon(0)
-	elif Input.is_action_just_pressed("weapon_slot_2"):
-		switch_weapon(1)
-	elif Input.is_action_just_pressed("weapon_slot_3"):
-		switch_weapon(2)
-	elif Input.is_action_just_pressed("weapon_slot_4"):
-		switch_weapon(3)
-	elif Input.is_action_just_pressed("weapon_slot_5"):
-		switch_weapon(4)
-	elif Input.is_action_just_pressed("weapon_next"):
-		if _weapons.size() > 1:
-			switch_weapon((_active_slot_index + 1) % _weapons.size())
-	elif Input.is_action_just_pressed("weapon_prev"):
-		if _weapons.size() > 1:
-			switch_weapon((_active_slot_index - 1 + _weapons.size()) % _weapons.size())
+	# Weapon slot switching inputs (Slots 0 to 11)
+	var switched_slot : bool = false
+	for slot_idx in range(min(_weapons.size(), 12)):
+		var action_name : String = "weapon_slot_%d" % (slot_idx + 1)
+		if Input.is_action_just_pressed(action_name):
+			switch_weapon(slot_idx)
+			switched_slot = true
+			break
+
+	if not switched_slot:
+		if Input.is_action_just_pressed("weapon_next"):
+			if _weapons.size() > 1:
+				switch_weapon((_active_slot_index + 1) % _weapons.size())
+		elif Input.is_action_just_pressed("weapon_prev"):
+			if _weapons.size() > 1:
+				switch_weapon((_active_slot_index - 1 + _weapons.size()) % _weapons.size())
 
 	# ADS input (hold RMB) - only if mouse is captured
 	var wants_aim : bool = false
@@ -550,16 +553,16 @@ func _process(delta: float) -> void:
 	var is_sniper_active : bool = false
 	if _active_weapon and is_instance_valid(_active_weapon) and _active_weapon.get("data") != null:
 		var w_name : String = _active_weapon.data.weapon_name.to_lower()
-		is_sniper_active = _active_weapon.data.get("is_sniper") == true or "sniper" in w_name
+		is_sniper_active = _active_weapon.data.get("is_sniper") == true or "sniper" in w_name or "dragunov" in w_name or "m40" in w_name
 		if is_sniper_active:
-			target_ads_fov = 28.0 # 3.2x high-magnification scope
-		elif "assault" in w_name or "m16" in w_name:
+			target_ads_fov = 28.0 if ("m40" in w_name or "sniper" in w_name) else 32.0 # High-magnification optical scope
+		elif "assault" in w_name or "m16" in w_name or "ak" in w_name:
 			target_ads_fov = 70.0 # Clear mid-range combat optic zoom
-		elif "smg" in w_name or "mp5" in w_name:
+		elif "smg" in w_name or "mp5" in w_name or "vector" in w_name:
 			target_ads_fov = 74.0 # Snappy close-quarters sight picture
-		elif "shotgun" in w_name:
+		elif "shotgun" in w_name or "sawed" in w_name:
 			target_ads_fov = 78.0 # Wide situational awareness
-		elif "pistol" in w_name or "glock" in w_name:
+		elif "pistol" in w_name or "glock" in w_name or "revolver" in w_name or "luger" in w_name or "desert eagle" in w_name:
 			target_ads_fov = 78.0 # Clean handgun eye alignment
 
 	# Smooth camera FOV zoom while aiming with smoothstep easing

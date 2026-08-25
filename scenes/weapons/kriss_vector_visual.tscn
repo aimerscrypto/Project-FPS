@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://c3krissvecvis01"]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_visual.gd" id="1_visual"]
+
+[node name="WeaponVisual" type="Node3D"]
+script = ExtResource("1_visual")
+weapon_node_name = "Kriss Vector_21"

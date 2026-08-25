@@ -1,7 +1,7 @@
 # Project FPS — Development Status
 
-**Last Updated:** 2026-08-18  
-**Current Milestone:** Milestone 15 — Full 5-Weapon Arsenal, Physical Spring Recoil, High-Performance Combat VFX, Spatial Audio & Stylized Arena Visual Polish (COMPLETE & RUNTIME VERIFIED)
+**Last Updated:** 2026-08-25  
+**Current Milestone:** Milestone 16 — Complete 12-Gun Arsenal Pipeline & Master GLB Isolation (COMPLETE & VERIFIED)
 
 ---
 
@@ -376,3 +376,24 @@ project-fps/
   - **Automated Verification Test Suite:**
     - 88/88 tests in `test_milestone15_audio_vfx_weapons.gd` passing.
     - **Total: 400 / 400 automated tests passing across all 9 milestone test suites (100% pass rate).**
+- [x] **Milestone 16 (Complete 12-Gun Master Asset Arsenal Integration):**
+  - **Full 12-Gun Master Asset Mapping (`assets/models/12_low_poly_guns.glb`):**
+    - Slot 0: M16 (`M16_8`) — Assault Rifle (Auto, 25 dmg, 10 RPS, 30/120 ammo)
+    - Slot 1: AK-47 (`AK47_13`) — Assault Rifle (Auto, 34 dmg, 8.5 RPS, 30/120 ammo)
+    - Slot 2: MP5 (`MP5_17`) — SMG (Auto, 18 dmg, 15 RPS, 35/140 ammo)
+    - Slot 3: Kriss Vector (`Kriss Vector_21`) — SMG (Auto, 14 dmg, 20 RPS, 30/150 ammo)
+    - Slot 4: Pump Action Shotgun (`Pump Action Shotgun_25`) — Shotgun (Pump, 12x8 dmg, 1.1 RPS, 6/36 ammo)
+    - Slot 5: Sawed-Off Shotgun (`Sawed-Off Shotgun_29`) — Shotgun (Double-barrel, 14x10 dmg, 3.5 RPS, 2/24 ammo)
+    - Slot 6: M40 (`M40_33`) — Sniper Rifle (Bolt, 85 dmg, 0.75 RPS, 5/20 ammo)
+    - Slot 7: Dragunov SVD (`Dragunov SVD_37`) — Sniper Rifle (Semi-Auto, 60 dmg, 2.2 RPS, 10/30 ammo)
+    - Slot 8: Glock Handgun (`Glock Handgun_45`) — Sidearm (Semi-Auto, 35 dmg, 5.0 RPS, 12/48 ammo)
+    - Slot 9: Revolver (`Revolver.001_51`) — Magnum Sidearm (DA Revolver, 65 dmg, 2.0 RPS, 6/36 ammo)
+    - Slot 10: Luger P08 (`Lugar_55,Lugar Body.001_62,Lugar Body.002_61`) — Sidearm (Semi-Auto, 28 dmg, 6.0 RPS, 8/40 ammo)
+    - Slot 11: Desert Eagle (`Desert Eagle Handgun_60`) — Heavy Sidearm (Semi-Auto, 55 dmg, 3.2 RPS, 7/35 ammo)
+  - **Dynamic Mesh Isolation & Extraction (`weapon_visual.gd`):**
+    - Subtree isolation supporting single and composite node extraction directly from `12_low_poly_guns.glb` without creating extracted mesh files.
+  - **12-Slot Inventory Control & ADS Optics:**
+    - Expanded input actions `weapon_slot_1` to `weapon_slot_12` (Keys `1`-`9`, `0`, `-`, `=`) + mouse wheel next/prev cycling.
+    - Geometric dead-center ADS sight calibration with tailored weapon-class optical zoom.
+    - Enemy bot combat auto-reload logic and 3D spatial reload audio feedback.
+

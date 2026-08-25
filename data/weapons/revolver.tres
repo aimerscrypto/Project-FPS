@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3 uid="uid://d3revolver35701"]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+weapon_name = "Revolver"
+damage = 65.0
+headshot_multiplier = 2.0
+fire_rate = 2.0
+is_automatic = false
+magazine_size = 6
+reserve_ammo = 36
+reload_time = 2.0
+spread_degrees = 0.7
+ads_spread_degrees = 0.10
+range_meters = 80.0
+pellet_count = 1
+recoil_vertical = 2.2
+recoil_horizontal = 0.40
+recoil_recovery = 5.0
+fire_sound = "pistol_fire"
+dryfire_sound = "pistol_dryfire"
+reload_sound = "pistol_reload"
+casing_type = "pistol"
+reload_profile = "pistol"
+is_sniper = false
+tracer_color = Color(1, 0.8, 0.3, 0.9)
+tracer_speed = 270.0

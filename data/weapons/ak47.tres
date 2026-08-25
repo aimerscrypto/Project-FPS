@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3 uid="uid://d3ak47weapon01"]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+weapon_name = "AK-47"
+damage = 34.0
+headshot_multiplier = 2.0
+fire_rate = 8.5
+is_automatic = true
+magazine_size = 30
+reserve_ammo = 120
+reload_time = 2.2
+spread_degrees = 0.6
+ads_spread_degrees = 0.12
+range_meters = 100.0
+pellet_count = 1
+recoil_vertical = 1.35
+recoil_horizontal = 0.50
+recoil_recovery = 4.2
+fire_sound = "ar_fire"
+dryfire_sound = "ar_dryfire"
+reload_sound = "ar_reload"
+casing_type = "rifle"
+reload_profile = "rifle"
+is_sniper = false
+tracer_color = Color(1, 0.75, 0.2, 0.9)
+tracer_speed = 280.0

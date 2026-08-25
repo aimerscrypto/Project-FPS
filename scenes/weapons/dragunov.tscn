@@ -1,0 +1,40 @@
+[gd_scene format=3 uid="uid://w0dragunov0001"]
+
+[ext_resource type="PackedScene" path="res://scenes/weapons/weapon_base.tscn" id="1_base"]
+[ext_resource type="Resource" path="res://data/weapons/dragunov.tres" id="2_data"]
+[ext_resource type="PackedScene" uid="uid://c3dragunovvis01" path="res://scenes/weapons/dragunov_visual.tscn" id="3_visual"]
+
+[sub_resource type="StandardMaterial3D" id="mat_muzzle"]
+shading_mode = 0
+albedo_color = Color(0.65, 0.9, 1.0, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_flash"]
+radius = 0.025
+height = 0.05
+
+[node name="Dragunov" instance=ExtResource("1_base")]
+data = ExtResource("2_data")
+
+[node name="RayCast3D" parent="." index="0"]
+visible = false
+
+[node name="WeaponVisual" parent="." index="1" instance=ExtResource("3_visual")]
+transform = Transform3D(0.55, 0, 0, 0, 0.55, 0, 0, 0, 0.55, 0.18, -0.18, -0.36)
+
+[node name="RightHandGrip" type="Marker3D" parent="." index="2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.23, -0.26)
+
+[node name="LeftHandGrip" type="Marker3D" parent="." index="3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.20, -0.52)
+
+[node name="MuzzleFlash" type="MeshInstance3D" parent="." index="4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.1149, -1.543)
+visible = false
+material_override = SubResource("mat_muzzle")
+mesh = SubResource("SphereMesh_flash")
+
+[node name="OpticPoint" type="Marker3D" parent="." index="5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, -0.1149, -0.36)
+
+[node name="EjectionPort" type="Marker3D" parent="." index="6"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.21, -0.15, -0.30)

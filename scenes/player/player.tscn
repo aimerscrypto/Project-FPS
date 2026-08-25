@@ -9,6 +9,13 @@
 [ext_resource type="PackedScene" path="res://scenes/weapons/smg.tscn" id="7_smg"]
 [ext_resource type="PackedScene" path="res://scenes/weapons/shotgun.tscn" id="8_shotgun"]
 [ext_resource type="PackedScene" path="res://scenes/weapons/sniper.tscn" id="9_sniper"]
+[ext_resource type="PackedScene" uid="uid://w0ak47scene001" path="res://scenes/weapons/ak47.tscn" id="10_ak47"]
+[ext_resource type="PackedScene" uid="uid://w0krissvec0001" path="res://scenes/weapons/kriss_vector.tscn" id="11_kriss"]
+[ext_resource type="PackedScene" uid="uid://w0sawedoff0001" path="res://scenes/weapons/sawed_off.tscn" id="12_sawed"]
+[ext_resource type="PackedScene" uid="uid://w0dragunov0001" path="res://scenes/weapons/dragunov.tscn" id="13_svd"]
+[ext_resource type="PackedScene" uid="uid://w0revolver0001" path="res://scenes/weapons/revolver.tscn" id="14_revolver"]
+[ext_resource type="PackedScene" uid="uid://w0lugerp080001" path="res://scenes/weapons/luger.tscn" id="15_luger"]
+[ext_resource type="PackedScene" uid="uid://w0deserteagle1" path="res://scenes/weapons/desert_eagle.tscn" id="16_deagle"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_1"]
 radius = 0.4
@@ -31,16 +38,37 @@ fov = 90.0
 
 [node name="AssaultRifle" parent="CameraMount/Camera3D" unique_id=121975209 instance=ExtResource("2_rifle")]
 
+[node name="AK47" parent="CameraMount/Camera3D" unique_id=121975210 instance=ExtResource("10_ak47")]
+visible = false
+
 [node name="SMG" parent="CameraMount/Camera3D" unique_id=741892101 instance=ExtResource("7_smg")]
+visible = false
+
+[node name="KrissVector" parent="CameraMount/Camera3D" unique_id=741892104 instance=ExtResource("11_kriss")]
 visible = false
 
 [node name="Shotgun" parent="CameraMount/Camera3D" unique_id=741892102 instance=ExtResource("8_shotgun")]
 visible = false
 
+[node name="SawedOff" parent="CameraMount/Camera3D" unique_id=741892105 instance=ExtResource("12_sawed")]
+visible = false
+
 [node name="Sniper" parent="CameraMount/Camera3D" unique_id=741892103 instance=ExtResource("9_sniper")]
 visible = false
 
+[node name="Dragunov" parent="CameraMount/Camera3D" unique_id=741892106 instance=ExtResource("13_svd")]
+visible = false
+
 [node name="Pistol" parent="CameraMount/Camera3D" unique_id=892341201 instance=ExtResource("6_pistol")]
+visible = false
+
+[node name="Revolver" parent="CameraMount/Camera3D" unique_id=892341202 instance=ExtResource("14_revolver")]
+visible = false
+
+[node name="Luger" parent="CameraMount/Camera3D" unique_id=892341203 instance=ExtResource("15_luger")]
+visible = false
+
+[node name="DesertEagle" parent="CameraMount/Camera3D" unique_id=892341204 instance=ExtResource("16_deagle")]
 visible = false
 
 [node name="CrosshairHUD" parent="." unique_id=800839462 instance=ExtResource("3_crosshair")]

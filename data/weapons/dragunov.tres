@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3 uid="uid://d3dragunovsvd01"]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+weapon_name = "Dragunov SVD"
+damage = 60.0
+headshot_multiplier = 2.0
+fire_rate = 2.2
+is_automatic = false
+magazine_size = 10
+reserve_ammo = 30
+reload_time = 2.1
+spread_degrees = 3.5
+ads_spread_degrees = 0.08
+range_meters = 140.0
+pellet_count = 1
+recoil_vertical = 2.8
+recoil_horizontal = 0.55
+recoil_recovery = 4.2
+fire_sound = "sniper_fire"
+dryfire_sound = "sniper_dryfire"
+reload_sound = "sniper_reload"
+casing_type = "rifle"
+reload_profile = "sniper"
+is_sniper = true
+tracer_color = Color(0.4, 0.85, 1, 0.95)
+tracer_speed = 340.0
